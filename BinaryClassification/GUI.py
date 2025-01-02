@@ -74,6 +74,12 @@ class ConfigGenerator(QWidget):
         self.wn_entry = QLineEdit('0.8,1')
         self.add_row(layout, wn_label, self.wn_entry)
 
+        # Seeds
+        seeds_label = QLabel('Seeds (comma separated):')
+        seeds_label.setFont(label_font)
+        self.seeds_entry = QLineEdit('')
+        self.add_row(layout, seeds_label, self.seeds_entry)
+
         # Depth Normalization
         depth_label = QLabel('Depth Normalization:')
         depth_label.setFont(label_font)
@@ -109,13 +115,6 @@ class ConfigGenerator(QWidget):
         self.opt_name_entry.addItems(['adam', 'sgd'])
         self.add_row(layout, opt_name_label, self.opt_name_entry)
 
-        # Device
-        device_label = QLabel('Device:')
-        device_label.setFont(label_font)
-        self.device_entry = QComboBox()
-        self.device_entry.addItems(['mps', 'cpu', 'cuda'])  # Add mps to the device options
-        self.add_row(layout, device_label, self.device_entry)
-
         # Progress Bar
         self.progress_bar = QProgressBar(self)
         layout.addWidget(self.progress_bar)
@@ -150,12 +149,12 @@ class ConfigGenerator(QWidget):
         self.l2_sum_lambda_entry.setText(inputs.get('l2_sum_lambda', ''))
         self.l2_mul_lambda_entry.setText(inputs.get('l2_mul_lambda', ''))
         self.wn_entry.setText(inputs.get('wn', '0.8,1'))
+        self.seeds_entry.setText(inputs.get('seed', ''))
         self.depth_normalization_entry.setCurrentText(inputs.get('depth_normalization', 'False'))
         self.features_normalization_entry.setCurrentText(inputs.get('features_normalization', 'f_out'))
         self.batch_norm_entry.setCurrentText(inputs.get('batch_norm', 'False'))
         self.bias_entry.setCurrentText(inputs.get('bias', 'True'))
         self.opt_name_entry.setCurrentText(inputs.get('opt_name', 'adam'))
-        self.device_entry.setCurrentText(inputs.get('device', 'cpu'))
 
     # Validation Functions as Instance Methods
     def validate_positive_int(self, value):
@@ -163,16 +162,6 @@ class ConfigGenerator(QWidget):
             int_value = int(value)
             if int_value > 0:
                 return int_value
-            else:
-                return None
-        except ValueError:
-            return None
-
-    def validate_positive_float(self, value):
-        try:
-            float_value = float(value)
-            if float_value > 0:
-                return float_value
             else:
                 return None
         except ValueError:
@@ -211,7 +200,7 @@ class ConfigGenerator(QWidget):
 
         # Validate Learning Rates
         lr_str = self.lr_entry.text()
-        lr_list = self.validate_comma_separated_list(lr_str, self.validate_positive_float)
+        lr_list = self.validate_comma_separated_list(lr_str, self.validate_non_negative_float)
         if lr_list is None or not lr_list:
             QMessageBox.critical(self, 'Invalid Input', 'Learning rates must be positive numbers, comma separated.', QMessageBox.Ok)
             return
@@ -242,25 +231,36 @@ class ConfigGenerator(QWidget):
         if wn_str.strip() == "":
             wn_list = []
         else:
-            wn_list = self.validate_comma_separated_list(wn_str, self.validate_positive_float)
+            wn_list = self.validate_comma_separated_list(wn_str, self.validate_non_negative_float)
             if wn_list is None or not wn_list:
                 QMessageBox.critical(self, 'Invalid Input', 'WN values must be positive numbers, comma separated.', QMessageBox.Ok)
                 return
+
+        # Validate Seeds
+        seeds_str = self.seeds_entry.text()
+        if seeds_str.strip():
+            seeds_list = self.validate_comma_separated_list(seeds_str, self.validate_positive_int)
+            if seeds_list is None:
+                QMessageBox.critical(self, 'Invalid Input', 'Seeds must be valid integers, comma separated (positive).', QMessageBox.Ok)
+                return
+        else:
+            seeds_list = []
 
         # Ensure that the data types match what main.py expects
         config = {
             "batchsize": batchsize,
             "lr": lr_list,
-            "n_epochs": n_epochs,  # Extract total epochs
+            "n_epochs": n_epochs,
             "l2_sum_lambda": l2_sum_lambda_list,
             "l2_mul_lambda": l2_mul_lambda_list,
             "wn": wn_list,
+            "seed": seeds_list,
             "depth_normalization": [self.depth_normalization_entry.currentText()],
             "features_normalization": [self.features_normalization_entry.currentText()],
             "batch_norm": [self.batch_norm_entry.currentText()],
             "bias": [self.bias_entry.currentText()],
-            "opt_name": self.opt_name_entry.currentText(),
-            "device": self.device_entry.currentText()
+            "device": "auto",
+            "opt_name": self.opt_name_entry.currentText()
         }
 
         # Set total epochs from the config
@@ -270,12 +270,7 @@ class ConfigGenerator(QWidget):
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"config_{timestamp}.json"
 
-        # Save to a specified directory
-        #config_dir = '/Users/rafaeldubach/automating_deep_learning_workflows/BinaryClassification/Configs'
-
-        # Instead of hard defining the path, we can use the following code to get the path
         config_dir = os.path.join(os.path.dirname(__file__), 'Configs')
-
         os.makedirs(config_dir, exist_ok=True)
         config_path = os.path.join(config_dir, filename)
 
@@ -289,11 +284,9 @@ class ConfigGenerator(QWidget):
             return
 
         # Prepare parameter lists for combinations
-        # Use [None] if the list is empty to handle empty cases
         l2_sum_lambda_values = config["l2_sum_lambda"] if config["l2_sum_lambda"] else [None]
         l2_mul_lambda_values = config["l2_mul_lambda"] if config["l2_mul_lambda"] else [None]
 
-        # Count total experiments from parameter combinations
         param_combinations = list(product_dict(
             batchsize=[config["batchsize"]],
             lr=config["lr"],
@@ -313,26 +306,19 @@ class ConfigGenerator(QWidget):
 
     def run_script(self, config_path):
         """ Run the commands separately to check if they work """
-
-        # instead of hard defining the main path we can use the following code to get the path dynamically
-
         main_dir = os.path.dirname(os.path.abspath(__file__))
 
-        # Define the command to run the Python script
         command = f"""
         cd {main_dir} && \
         conda activate DL && \
         python -u main.py --config "{config_path}"
         """
 
-        # Initialize QProcess
         self.process = QProcess(self)
         self.process.setProcessChannelMode(QProcess.MergedChannels)  # Combine stdout and stderr
         self.process.finished.connect(self.process_finished)
         self.process.readyRead.connect(self.read_stdout)
         self.process.errorOccurred.connect(self.process_error)
-
-        # Start the process
         self.process.start('/bin/bash', ['-c', command])
 
     def update_progress_bar(self):
@@ -344,11 +330,8 @@ class ConfigGenerator(QWidget):
             # Combine epoch and experiment progress
             total_progress = (total_experiment_progress + total_epoch_progress / self.total_experiments) * 100
 
-            # Update the progress bar value and format
             self.progress_bar.setValue(int(total_progress))
             self.progress_bar.setFormat(f"Experiment {self.current_experiment}/{self.total_experiments} - Epoch {self.current_epoch}/{self.total_epochs}")
-
-            # Force GUI update to reflect the changes
             QApplication.processEvents()
 
     def process_finished(self):
@@ -358,15 +341,13 @@ class ConfigGenerator(QWidget):
     def read_stdout(self):
         """ Read and process the output to update progress based on the epoch and experiment """
         output = self.process.readAll().data().decode()
-        self.output_text.append(output)  # Append output to the text edit
+        self.output_text.append(output)
 
-        # Use regex to capture the current epoch from the output
         epoch_match = re.search(r'Train Epoch: (\d+)', output)
         if epoch_match:
             self.current_epoch = int(epoch_match.group(1))
-            self.update_progress_bar()  # Update the progress bar based on the current epoch
+            self.update_progress_bar()
 
-        # Capture experiment number if available (this would need to be printed in your output)
         experiment_match = re.search(r'Running Experiment (\d+)', output)
         if experiment_match:
             self.current_experiment = int(experiment_match.group(1))
@@ -396,12 +377,12 @@ if __name__ == '__main__':
         'l2_sum_lambda': '0.1,0.2',
         'l2_mul_lambda': '0.05',
         'wn': '0.9',
+        'seed': '12,34',
         'depth_normalization': 'True',
         'features_normalization': 'None',
         'batch_norm': 'True',
         'bias': 'False',
-        'opt_name': 'sgd',
-        'device': 'cuda'
+        'opt_name': 'sgd'
     }
     window.set_predefined_inputs(test_inputs)
 

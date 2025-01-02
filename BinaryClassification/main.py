@@ -105,8 +105,6 @@ def main():
             device = torch.device("cpu")
     else:
         device = torch.device(args.device)
-    
-    print(f"Running on {device.type.upper()}")
 
     # Configuration dictionary
     cfg = {
@@ -245,6 +243,10 @@ def main():
             experiment_cfg.update(params)  # Update the cfg dictionary with current params
 
             # Set the seed for reproducibility
+            #set_seed(experiment_cfg['seed'])
+
+            # Only set the seed if CUDA is available
+            #if torch.cuda.is_available():
             set_seed(experiment_cfg['seed'])
 
             # Create a fresh copy of the training dataset for this experiment

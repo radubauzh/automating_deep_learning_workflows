@@ -12,7 +12,13 @@
     "l2_mul_lambda": [
         0.05
     ],
-    "wn": [],
+    "wn": [
+        0.9
+    ],
+    "seed": [
+        12,
+        34
+    ],
     "depth_normalization": [
         "True"
     ],
@@ -25,6 +31,6 @@
     "bias": [
         "False"
     ],
-    "opt_name": "sgd",
-    "device": "cuda"
+    "device": "auto",
+    "opt_name": "sgd"
 }

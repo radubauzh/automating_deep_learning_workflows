@@ -294,11 +294,7 @@ def experiment(cfg, train_loader, test_loader, print_every_batch=100):
     set_seed(cfg['seed'])  # Use the seed from cfg
 
     timestamp_str = datetime.now().strftime("%Y%m%d%H%M%S")
-
-
-    # Set the device (GPU or CPU)
-    device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
-    cfg['device'] = device  # Update the configuration with the selected device
+    device = cfg['device']
 
     # Log device info
     print(f"Running on device: {device}")
