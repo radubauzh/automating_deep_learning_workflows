@@ -308,8 +308,15 @@ class ConfigGenerator(QWidget):
         """ Run the commands separately to check if they work """
         main_dir = os.path.dirname(os.path.abspath(__file__))
 
+        # command = f"""
+        # cd {main_dir} && \
+        # conda activate DL && \
+        # python -u main.py --config "{config_path}"
+        # """
+
         command = f"""
         cd {main_dir} && \
+        source ~/miniconda3/etc/profile.d/conda.sh && \
         conda activate DL && \
         python -u main.py --config "{config_path}"
         """

@@ -1,0 +1,2 @@
+Experiment: Results_20250102-113435_[Weight_Normalization]_[Summation_Multiplication]_opt_[sgd]_lr_[[0.01, 0.001]]_batchsize[[64]]_l2sum[[0.1, 0.2]]_l2mul[0.05]_wn[0.9]_bn[True]_seed[[12, 34]]_mislabel[0.0]
+Best Test Accuracy: 50.05%
