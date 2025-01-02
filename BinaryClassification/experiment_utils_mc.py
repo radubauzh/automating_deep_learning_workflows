@@ -190,7 +190,7 @@ def train_epoch(model, cfg, train_loader, optimizer, print_every_batch=100):
     train_accuracy = accuracy_score(targets_binary, preds_binary)
     train_f1 = f1_score(targets_binary, preds_binary, average='binary')
     train_cm = confusion_matrix(targets_binary, preds_binary)
-    print(f"\nEpoch {cfg['epoch']} Mean Confidence: {mean_epoch_confidence:.6f}")
+    #print(f"\nEpoch {cfg['epoch']} Mean Confidence: {mean_epoch_confidence:.6f}")
 
     return {
         "loss_out": loss_out,
@@ -404,7 +404,7 @@ def experiment(cfg, train_loader, test_loader, print_every_batch=100):
         print(f"Epoch {epoch} completed in {epoch_time:.2f} seconds")
 
         current_lr = scheduler.get_last_lr()[0]
-        print(f"Current learning rate: {current_lr:.6f}")
+        #print(f"Current learning rate: {current_lr:.6f}")
         results['learning_rates'].append(current_lr)
 
         # Store the time taken for this epoch
@@ -433,7 +433,7 @@ def experiment(cfg, train_loader, test_loader, print_every_batch=100):
         else:
             prod_rho = torch.sqrt(model.compute_l2_mul(False, False)).item()  # Only compute if regularization is applied
         results['rho_values'].append(prod_rho)
-        print(f"rho at epoch {epoch}: {prod_rho}")
+        #print(f"rho at epoch {epoch}: {prod_rho}")
 
 
         # Early stopping if 100 epochs are reached without exceeding 60% accuracy

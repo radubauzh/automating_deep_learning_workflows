@@ -19,7 +19,7 @@ def analyze_results(pickle_file):
             del results[key]   
 
     # Extract the filename without extension to use as the folder name
-    experiment_name = "Results_" + os.path.splitext(os.path.basename(pickle_file))[0]
+    experiment_name = "Analysis_Result_" + os.path.splitext(os.path.basename(pickle_file))[0]
     output_dir = os.path.join('results', experiment_name)
     os.makedirs(output_dir, exist_ok=True)
 

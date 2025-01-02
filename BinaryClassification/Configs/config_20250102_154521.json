@@ -1,0 +1,31 @@
+{
+    "batchsize": 64,
+    "lr": [
+        0.01
+    ],
+    "n_epochs": 10,
+    "l2_sum_lambda": [
+        0.03
+    ],
+    "l2_mul_lambda": [],
+    "wn": [
+        0.9
+    ],
+    "seed": [
+        42
+    ],
+    "depth_normalization": [
+        "True"
+    ],
+    "features_normalization": [
+        "None"
+    ],
+    "batch_norm": [
+        "True"
+    ],
+    "bias": [
+        "False"
+    ],
+    "device": "auto",
+    "opt_name": "sgd"
+}

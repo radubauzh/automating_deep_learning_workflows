@@ -344,6 +344,7 @@ class ConfigGenerator(QWidget):
     def process_finished(self):
         self.progress_bar.setValue(100)
         QMessageBox.information(self, 'Success', 'Script ran successfully!', QMessageBox.Ok)
+        window.close()
 
     def read_stdout(self):
         """ Read and process the output to update progress based on the epoch and experiment """
