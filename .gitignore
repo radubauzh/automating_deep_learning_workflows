@@ -176,3 +176,6 @@ Data/
 
 # PyPI configuration file
 .pypirc
+
+# MacOs
+.DS_Store
