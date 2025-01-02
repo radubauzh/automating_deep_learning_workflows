@@ -1,0 +1,16 @@
+{
+    "batchsize": [128],
+    "lr": [0.03],
+    "n_epochs": 1000,
+    "l2_sum_lambda": [],
+    "l2_mul_lambda": [0.1, 0.01, 0.001],
+    "wn": ["0.8", "0.9", "1.0", "1.1", "1.2", "2.00"],
+    "depth_normalization": ["False"],
+    "features_normalization": ["f_out"],
+    "batch_norm": ["False"],
+    "bias": "False",
+    "opt_name": "adam",
+    "seed": [5],
+    "device": "cuda",
+    "mislabel_percentage": 0.0
+}
