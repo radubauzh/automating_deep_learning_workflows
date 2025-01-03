@@ -6,7 +6,7 @@ import re
 from itertools import product
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QLabel, QLineEdit, QComboBox, QPushButton,
-    QVBoxLayout, QHBoxLayout, QMessageBox, QProgressBar, QTextEdit
+    QVBoxLayout, QHBoxLayout, QMessageBox, QTextEdit
 )
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt, QProcess
@@ -40,6 +40,9 @@ class ConfigGenerator(QWidget):
         self.current_epoch = 0  # To track the current epoch
         self.total_experiments = 0  # To track total experiments
         self.current_experiment = 1  # Start from 1 to avoid division by zero
+        self.global_epoch_count = 0
+        self._last_experiment = 1
+        self._last_epoch_for_experiment = 0
 
     def init_ui(self):
         # Set the window title and size
@@ -128,11 +131,6 @@ class ConfigGenerator(QWidget):
         self.opt_name_entry = QComboBox()
         self.opt_name_entry.addItems(['adam', 'adamw', 'sgd'])
         self.add_row(layout, opt_name_label, self.opt_name_entry)
-
-        # Progress Bar
-        self.progress_bar = QProgressBar(self)
-        layout.addWidget(self.progress_bar)
-        self.progress_bar.setValue(0)
 
         # Output TextEdit
         self.output_text = QTextEdit(self)
@@ -292,7 +290,7 @@ class ConfigGenerator(QWidget):
         try:
             with open(config_path, 'w') as f:
                 json.dump(config, f, indent=4)
-            QMessageBox.information(self, 'Success', f'Configuration saved successfully at {config_path}!', QMessageBox.Ok)
+            QMessageBox.information(self, 'Success', f'Configuration saved successfully at: \n \n {config_path}!', QMessageBox.Ok)
         except Exception as e:
             QMessageBox.critical(self, 'Error', f'Failed to save configuration file:\n{str(e)}', QMessageBox.Ok)
             return
@@ -322,12 +320,6 @@ class ConfigGenerator(QWidget):
         """ Run the commands separately to check if they work """
         main_dir = os.path.dirname(os.path.abspath(__file__))
 
-        # command = f"""
-        # cd {main_dir} && \
-        # conda activate DL && \
-        # python -u main.py --config "{config_path}"
-        # """
-
         command = f"""
         cd {main_dir} && \
         source ~/miniconda3/etc/profile.d/conda.sh && \
@@ -342,37 +334,30 @@ class ConfigGenerator(QWidget):
         self.process.errorOccurred.connect(self.process_error)
         self.process.start('/bin/bash', ['-c', command])
 
-
-    def update_progress_bar(self):
-        """ Update the progress bar value based on epochs and experiments """
-        if self.total_epochs > 0 and self.total_experiments > 0:
-            total_steps = self.total_experiments * self.total_epochs
-            current_steps = (self.current_experiment - 1) * self.total_epochs + self.current_epoch
-            total_progress = (current_steps / total_steps) * 100
-
-            self.progress_bar.setValue(int(total_progress))
-            self.progress_bar.setFormat(f"Experiment {self.current_experiment}/{self.total_experiments} - Epoch {self.current_epoch}/{self.total_epochs}")
-            QApplication.processEvents()
-
     def process_finished(self):
-        self.progress_bar.setValue(100)
         QMessageBox.information(self, 'Success', 'Script ran successfully!', QMessageBox.Ok)
         window.close()
 
     def read_stdout(self):
-        """ Read and process the output to update progress based on the epoch and experiment """
         output = self.process.readAll().data().decode()
         self.output_text.append(output)
 
-        epoch_match = re.search(r'Train Epoch: (\d+)', output)
-        if epoch_match:
-            self.current_epoch = int(epoch_match.group(1))
-            self.update_progress_bar()
-
+        # Check if we moved to a new experiment
         experiment_match = re.search(r'Running Experiment (\d+)', output)
         if experiment_match:
-            self.current_experiment = int(experiment_match.group(1))
-            self.update_progress_bar()
+            new_experiment_num = int(experiment_match.group(1))
+            if new_experiment_num != self._last_experiment:
+                self._last_experiment = new_experiment_num
+                self._last_epoch_for_experiment = 0  # reset for new experiment
+            self.current_experiment = new_experiment_num
+
+        # Only count new epochs if the epoch number is higher than the last recorded
+        epoch_matches = re.findall(r'Train Epoch: (\d+)', output)
+        for epoch_str in epoch_matches:
+            epoch_num = int(epoch_str)
+            if epoch_num > self._last_epoch_for_experiment:
+                self._last_epoch_for_experiment = epoch_num
+                self.global_epoch_count += 1
 
     def process_error(self, error):
         error_str = {

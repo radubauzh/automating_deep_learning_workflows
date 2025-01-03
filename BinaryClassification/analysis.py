@@ -5,11 +5,22 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from openai import OpenAI
+import ast  # For safe evaluation of string-represented lists
 
 
 def flatten_list(nested_list):
     return [item for sublist in nested_list for item in sublist]
 
+
+def get_last_n_values(data, n=10):
+    """Helper function to get last n values from a list or nested list."""
+    if isinstance(data, list):
+        if isinstance(data[0], list):
+            return [item[-n:] for item in data]
+        return data[-n:]
+    elif isinstance(data, pd.Series):
+        return data.apply(lambda x: x[-n:] if isinstance(x, list) else x)
+    return data
 
 def generate_gpt_analysis_report(
     csv_path, model="gpt-4o-mini", output_folder="Results"
@@ -87,15 +98,47 @@ def analyze_results(pickle_file):
         "model_state_name",
         "hp",
         "device",
+        "learning_rates",
+        "misclassified_indices",
+        "margins",
+        "test_f1_scores",
+        "train_f1_scores",
     ]
     for key in keys_to_remove:
         if key in results:
             del results[key]
 
+    # Convert string-represented lists to actual lists
+    for key in results:
+        if isinstance(results[key], str) and "[" in results[key]:
+            results[key] = ast.literal_eval(results[key])
+
+    # Truncate lists to last 10 values
+    columns_to_truncate = [
+        "train_epoch_losses",
+        "train_epoch_l2_sum_losses",
+        "train_epoch_l2_mul_losses",
+        "train_batch_losses",
+        "train_batch_l2_sum_losses",
+        "train_batch_l2_mul_losses",
+        "test_losses",
+        "test_accuracies",
+        "train_losses",
+        "train_accuracies",
+        "rho_values",
+    ]
+    for column in columns_to_truncate:
+        if column in results:
+            results[column] = get_last_n_values(results[column])
+            # print(column)
+            # print(len(results[column]))
+            # print(type(results[column]))
+            # print(results[column])
+            # print(results[column][0])
+
+
     # Build output folder name
-    experiment_name = (
-        "Analysis_Result_" + os.path.splitext(os.path.basename(pickle_file))[0]
-    )
+    experiment_name = "Analysis_Result_" + os.path.splitext(os.path.basename(pickle_file))[0]
     output_dir = os.path.join("results", experiment_name)
     os.makedirs(output_dir, exist_ok=True)
 
