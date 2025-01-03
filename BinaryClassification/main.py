@@ -381,7 +381,5 @@ def main():
     #analyze_results(filename)
     analysis.analyze_results(filename)
 
-
-
 if __name__ == "__main__":
     main()
