@@ -14,9 +14,22 @@ from PyQt5.QtCore import Qt, QProcess
 # Function to create a product of dictionaries
 def product_dict(**kwargs):
     keys = kwargs.keys()
-    for instance in product(*kwargs.values()):
-        yield dict(zip(keys, instance))
-        print("leninstance",len(instance))
+    if 'l2_sum_lambda' in keys and 'l2_mul_lambda' in keys:
+        l2_sum_lambda_values = kwargs['l2_sum_lambda']
+        l2_mul_lambda_values = kwargs['l2_mul_lambda']
+        other_kwargs = {k: v for k, v in kwargs.items() if k not in ['l2_sum_lambda', 'l2_mul_lambda']}
+        
+        for l2_sum_lambda in l2_sum_lambda_values:
+            for instance in product(*other_kwargs.values()):
+                yield dict(zip(other_kwargs.keys(), instance), l2_sum_lambda=l2_sum_lambda, l2_mul_lambda=[])
+        
+        for l2_mul_lambda in l2_mul_lambda_values:
+            for instance in product(*other_kwargs.values()):
+                yield dict(zip(other_kwargs.keys(), instance), l2_sum_lambda=[], l2_mul_lambda=l2_mul_lambda)
+    else:
+        for instance in product(*kwargs.values()):
+            yield dict(zip(keys, instance))
+
 
 class ConfigGenerator(QWidget):
     def __init__(self):
@@ -329,14 +342,13 @@ class ConfigGenerator(QWidget):
         self.process.errorOccurred.connect(self.process_error)
         self.process.start('/bin/bash', ['-c', command])
 
+
     def update_progress_bar(self):
         """ Update the progress bar value based on epochs and experiments """
         if self.total_epochs > 0 and self.total_experiments > 0:
-            total_epoch_progress = (self.current_epoch / self.total_epochs)
-            total_experiment_progress = ((self.current_experiment - 1) / self.total_experiments)
-
-            # Combine epoch and experiment progress
-            total_progress = (total_experiment_progress + total_epoch_progress / self.total_experiments) * 100
+            total_steps = self.total_experiments * self.total_epochs
+            current_steps = (self.current_experiment - 1) * self.total_epochs + self.current_epoch
+            total_progress = (current_steps / total_steps) * 100
 
             self.progress_bar.setValue(int(total_progress))
             self.progress_bar.setFormat(f"Experiment {self.current_experiment}/{self.total_experiments} - Epoch {self.current_epoch}/{self.total_epochs}")
@@ -381,12 +393,12 @@ if __name__ == '__main__':
 
     test_inputs = {
         'batchsize': 64,
-        'lr': '0.01,0.001',
+        'lr': '0.01',
         'n_epochs': 10,
         'l2_sum_lambda': '0.01,0.001',
         'l2_mul_lambda': '0.01,0.001',
         'wn': '0.9',
-        'seed': '12,34',
+        'seed': '42',
         'depth_normalization': 'False',
         'features_normalization': 'f_out',
         'batch_norm': 'False',
