@@ -31,13 +31,12 @@ def generate_gpt_analysis_report(
     You have CSV data from multiple experiments. Please analyze it thoroughly and produce a concise, 
     insightful report covering the following points:
 
-    1. **Best Parameters**: Identify which parameters produced the best outcomes overall, especially include l2_sum_lambda (Additive Experiment) and l2_mul_lambda (Multiplicative), if both are 0 it's the no regularization Experiment.
-    2. **Experiment Type Analysis**: Determine which experiment type performed best and provide insights 
-    into their relative performance.
-    3. **Top Experiments**: List the top 3 experiments overall, and also the best experiment within each 
-    experiment type.
-    4. **Detailed Insights**: Highlight any notable trends or observations from the data.
-    5. **Recommendations**: Based on the analysis, provide recommendations for future experiments.
+    1. **Overall Performance**: Provide an overview of the performance metrics across all experiments, detect if the Models learned or not and if they overfit or underfit or not.
+    2. **Best Parameters**: Identify which parameters produced the best outcomes overall, especially include l2_sum_lambda (Additive Experiment) and l2_mul_lambda (Multiplicative), if both are 0 it's the no regularization Experiment.
+    3. **Experiment Type Analysis**: Determine which experiment type performed best and provide insights into their relative performance.
+    4. **Top Experiments**: List the top 3 experiments overall, and also the best experiment within each experiment type.
+    5. **Detailed Insights**: Highlight any notable trends or observations from the data.
+    6. **Recommendations**: Based on the analysis, provide recommendations for future experiments.
 
     Present the analysis in well-structured Markdown suitable for decision-making.
 

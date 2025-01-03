@@ -7,24 +7,12 @@ import pickle
 import os
 import argparse
 import json
-from functools import reduce
-from itertools import product
-import time
 from datetime import datetime
-import numpy as np
 import copy
-
-import matplotlib.pyplot as plt
 import pandas as pd
 import torch
-import torch.nn as nn
-import torch.optim as optim
 from torchvision import datasets, transforms
-
-from sklearn.metrics import confusion_matrix, f1_score, accuracy_score
-
-from experiment_utils_mc import experiment, product_dict, extract_best_results, set_seed, mislabel_dataset
-
+from experiment_utils_mc import experiment, product_dict, set_seed, mislabel_dataset
 import analysis
 
 def parse_args():
@@ -41,7 +29,7 @@ def parse_args():
     parser.add_argument("--features_normalization", type=str, nargs='+', help="Normalize the penalty term by the number of features")
     parser.add_argument("--batch_norm", type=str, nargs='+', help="Use batch normalization (e.g., 'True', 'False')")
     parser.add_argument("--bias", type=str, nargs='+', help="Use bias (e.g., 'True', 'False')")
-    parser.add_argument("--opt_name", type=str, nargs='+', help="Optimizer name (e.g., 'adam', 'sgd')")
+    parser.add_argument("--opt_name", type=str, nargs='+', help="Optimizer name (e.g., 'adam', 'sgd', 'adamw')")
     parser.add_argument("--device", type=str, choices=["auto", "cpu", "cuda", "mps", "cuda:0", "cuda:1", "cuda:2", "cuda:3"], help="Device to run the training on ('auto', 'cpu', 'cuda', 'mps')")
     parser.add_argument("--seed", type=int, nargs='+', help="Random seed values to try")
     parser.add_argument("--mislabel_percentage", type=float, help="Percentage of labels to mislabel (between 0 and 1)")
@@ -65,7 +53,6 @@ def parse_args():
                     setattr(args, key, value)
 
     # Ensure 'wn' is correctly parsed into appropriate types
-    #args.wn = [None if wn == "None" else float(wn) if wn.replace('.', '', 1).isdigit() else wn for wn in args.wn]
     args.wn = [None if str(wn) == "None" else float(wn) if str(wn).replace('.', '', 1).isdigit() else wn for wn in args.wn]
     args.features_normalization = [None if f_n == "None" else f_n for f_n in args.features_normalization]
     
@@ -92,9 +79,6 @@ def parse_args():
 def main():
     args = parse_args()
     warnings.simplefilter(action="ignore", category=FutureWarning)
-
-    #print("Available CUDA devices: ", torch.cuda.device_count())
-    #print("Is CUDA available? ", torch.cuda.is_available())
 
     # Set device based on command line argument
     if args.device == "auto":
@@ -125,9 +109,6 @@ def main():
         'mislabel_percentage': args.mislabel_percentage,
     }
 
-    # Print all parameters
-    #print("Parameters:", cfg)
-
     # Define a transformation for the dataset (normalization, etc.)
     transform = transforms.Compose([
         transforms.ToTensor(),
@@ -149,8 +130,6 @@ def main():
     # Filter for only classes 3 and 4
     trainset_original = filter_cifar10_classes(trainset_original, classes=[3, 4])
     testset = filter_cifar10_classes(testset, classes=[3, 4])
-
-    #print("Unique labels in the dataset:", set(trainset_original.targets))
 
     # Limit to 10,000 training images and 2,000 testing images
     trainset_original.data = trainset_original.data[:10000]
@@ -243,10 +222,6 @@ def main():
             experiment_cfg = cfg.copy()
             experiment_cfg.update(params)  # Update the cfg dictionary with current params
 
-            # Set the seed for reproducibility
-            #set_seed(experiment_cfg['seed'])
-
-            # Only set the seed if CUDA is available
             #if torch.cuda.is_available():
             set_seed(experiment_cfg['seed'])
 
@@ -271,19 +246,6 @@ def main():
                 **experiment_results["hp"],
                 **experiment_results
             }, ignore_index=True)
-
-            # # NEW: Save per-experiment results
-            # experiment_folder = os.path.join('results', experiment_type)
-            # os.makedirs(experiment_folder, exist_ok=True)
-            
-            # # Generate filename with date at the beginning and including the experiment name and seed
-            # experiment_filename = f"{datetime.now():%Y%m%d-%H%M%S}_{experiment_type}_lr_{params['lr']}_epochs_{params['n_epochs']}_seed_{params['seed']}_batchsize_{params['batchsize']}_per_experiment.pkl"
-            # experiment_filepath = os.path.join(experiment_folder, experiment_filename)
-
-            # # Save each experiment result to a separate pickle file
-            # with open(experiment_filepath, "wb") as f:
-            #     pickle.dump(experiment_results, f)
-            # print(f"Results for {experiment_type} with seed {params['seed']} saved to {experiment_filepath}")
 
     results.fillna(value='None', inplace=True)  # Fill None values
 
@@ -377,8 +339,7 @@ def main():
         pickle.dump(results, f)
     print(f"Overall results saved to {filename}")
 
-    # Call analysis.py script to analyze the results with the current filepath
-    #analyze_results(filename)
+    # Call analysis.py script to analyze the results with ChatGPT
     analysis.analyze_results(filename)
 
 if __name__ == "__main__":

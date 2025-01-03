@@ -334,7 +334,7 @@ def experiment(cfg, train_loader, test_loader, print_every_batch=100):
         optimizer = torch.optim.Adam(model.parameters(), lr=cfg['lr'])
         print("Using Adam optimizer")
     elif cfg['opt_name'] == "adamw":
-        optimizer = torch.optim.AdamW(model.parameters(), lr=cfg['lr'], weight_decay=0)
+        optimizer = torch.optim.AdamW(model.parameters(), lr=cfg['lr'])
         print("Using AdamW optimizer")
     elif cfg['opt_name'] == "sgd":
         optimizer = torch.optim.SGD(model.parameters(), lr=cfg['lr'], momentum=0.9)

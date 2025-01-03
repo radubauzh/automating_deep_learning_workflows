@@ -16,6 +16,7 @@ def product_dict(**kwargs):
     keys = kwargs.keys()
     for instance in product(*kwargs.values()):
         yield dict(zip(keys, instance))
+        print("leninstance",len(instance))
 
 class ConfigGenerator(QWidget):
     def __init__(self):
@@ -112,7 +113,7 @@ class ConfigGenerator(QWidget):
         opt_name_label = QLabel('Optimizer Name:')
         opt_name_label.setFont(label_font)
         self.opt_name_entry = QComboBox()
-        self.opt_name_entry.addItems(['adam', 'sgd'])
+        self.opt_name_entry.addItems(['adam', 'adamw', 'sgd'])
         self.add_row(layout, opt_name_label, self.opt_name_entry)
 
         # Progress Bar
@@ -154,7 +155,7 @@ class ConfigGenerator(QWidget):
         self.features_normalization_entry.setCurrentText(inputs.get('features_normalization', 'f_out'))
         self.batch_norm_entry.setCurrentText(inputs.get('batch_norm', 'False'))
         self.bias_entry.setCurrentText(inputs.get('bias', 'True'))
-        self.opt_name_entry.setCurrentText(inputs.get('opt_name', 'adam'))
+        self.opt_name_entry.setCurrentText(inputs.get('opt_name', 'adamw'))
 
     # Validation Functions as Instance Methods
     def validate_positive_int(self, value):
@@ -382,15 +383,15 @@ if __name__ == '__main__':
         'batchsize': 64,
         'lr': '0.01,0.001',
         'n_epochs': 10,
-        'l2_sum_lambda': '0.1,0.2',
-        'l2_mul_lambda': '0.05',
+        'l2_sum_lambda': '0.01,0.001',
+        'l2_mul_lambda': '0.01,0.001',
         'wn': '0.9',
         'seed': '12,34',
-        'depth_normalization': 'True',
-        'features_normalization': 'None',
-        'batch_norm': 'True',
+        'depth_normalization': 'False',
+        'features_normalization': 'f_out',
+        'batch_norm': 'False',
         'bias': 'False',
-        'opt_name': 'sgd'
+        'opt_name': 'adamw'
     }
     window.set_predefined_inputs(test_inputs)
 
