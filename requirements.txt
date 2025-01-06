@@ -1,0 +1,8 @@
+torch>=2.0
+torchvision>=0.15
+numpy>=1.21
+scikit-learn>=1.0
+matplotlib>=3.3
+pandas>=1.0
+PyQt5>=5.15
+openai>=0.27
