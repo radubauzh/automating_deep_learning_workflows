@@ -1,7 +1,4 @@
-# experiment_utils_mc.py
-
 # Import necessary libraries
-from functools import reduce
 from itertools import product
 import os
 import random
@@ -9,9 +6,8 @@ from sklearn.metrics import confusion_matrix, f1_score, accuracy_score
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-# from torch.nn import BCEWithLogitsLoss
 import torch.nn.functional as F
-from model import RegNet, PaperWNInitModel, PaperWNModel, OverparameterizedCNN, RhoWNModel, UnderparameterizedCNN, SuperUnderparameterizedCNN, set_model_norm_to_one
+from model import RegNet, PaperWNInitModel, PaperWNModel, RhoWNModel, UnderparameterizedCNN, set_model_norm_to_one
 import gc
 import time
 from datetime import datetime
@@ -190,7 +186,6 @@ def train_epoch(model, cfg, train_loader, optimizer, print_every_batch=100):
     train_accuracy = accuracy_score(targets_binary, preds_binary)
     train_f1 = f1_score(targets_binary, preds_binary, average='binary')
     train_cm = confusion_matrix(targets_binary, preds_binary)
-    #print(f"\nEpoch {cfg['epoch']} Mean Confidence: {mean_epoch_confidence:.6f}")
 
     return {
         "loss_out": loss_out,
@@ -199,7 +194,7 @@ def train_epoch(model, cfg, train_loader, optimizer, print_every_batch=100):
         "loss_vec": loss_vec,
         "l2_sum_loss_vec": l2_sum_loss_vec,
         "l2_mul_loss_vec": l2_mul_loss_vec,
-        "norms_vec": norms_vec,  # Now norms are computed and stored
+        "norms_vec": norms_vec,  
         "accuracy": train_accuracy,
         "f1_score": train_f1,
         "confusion_matrix": train_cm,
@@ -214,7 +209,7 @@ def test(model, cfg, loader, loader_name="Test"):
 
     all_preds = []
     all_targets = []
-    misclassified_indices = []  # To store indices of misclassified samples
+    misclassified_indices = []  
 
     with torch.no_grad():
         for batch_idx, (data, target) in enumerate(loader):
@@ -247,7 +242,6 @@ def test(model, cfg, loader, loader_name="Test"):
 
     test_f1 = f1_score(targets_binary, preds_binary, average='binary')  # Binary f1
     test_cm = confusion_matrix(targets_binary, preds_binary)  # Confusion matrix for 0/1
-    #print("Missclassified indices len:", len(misclassified_indices))
 
     print(
         f"\n{loader_name} set: Average loss: {loss:.4f}, Accuracy: {correct}/{len(loader.dataset)} ({accuracy:.2f}%)\n"
@@ -308,7 +302,7 @@ def experiment(cfg, train_loader, test_loader, print_every_batch=100):
         cfg['batch_norm'] = cfg['batch_norm']  # Use batch_norm as per the configuration
 
 
-    model_name = "UnderparameterizedCNN"  # Ensure model_name is defined
+    model_name = "UnderparameterizedCNN" 
     model = UnderparameterizedCNN(
         in_channels=cfg['in_channels'],
         num_classes=1,  # Change from 10 to 1 for binary classification
@@ -342,7 +336,6 @@ def experiment(cfg, train_loader, test_loader, print_every_batch=100):
         raise ValueError(f"Unknown optimizer: {cfg['opt_name']}")
 
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=cfg['n_epochs'], eta_min=0.003)
-    #scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=cfg['n_epochs']*len(train_loader), eta_min=0.01)
 
     # Initialize results dictionary
     results = {
@@ -362,14 +355,14 @@ def experiment(cfg, train_loader, test_loader, print_every_batch=100):
         "test_f1_scores": [], 
         "test_confusion_matrices": [], 
         "norms": [],
-        "epoch_times": [],  # New field to track time per epoch
-        "mean_margin": None,  # Field to store mean margin at convergence
-        "margins_per_sample": None,  # To store per-sample margins at convergence
-        "misclassified_indices": [],  # To store misclassified sample indices per epoch
-        "weight_ranks": None,  # To store weight ranks
-        "rho_values": [],  # To store rho values per epoch
-        "learning_rates": [],  # New field to store learning rates per epoch
-        "model_state_name": None,  # To store model state filename
+        "epoch_times": [],  
+        "mean_margin": None,
+        "margins_per_sample": None, 
+        "misclassified_indices": [],
+        "weight_ranks": None,
+        "rho_values": [],
+        "learning_rates": [],
+        "model_state_name": None,
 
     }
 
@@ -379,7 +372,7 @@ def experiment(cfg, train_loader, test_loader, print_every_batch=100):
     for epoch in range(1, cfg['n_epochs'] + 1):
         cfg['epoch'] = epoch
 
-        start_time = time.time()  # Start timing the epoch
+        start_time = time.time()
 
         train_results = train_epoch(
             model=model,
@@ -404,7 +397,6 @@ def experiment(cfg, train_loader, test_loader, print_every_batch=100):
         print(f"Epoch {epoch} completed in {epoch_time:.2f} seconds")
 
         current_lr = scheduler.get_last_lr()[0]
-        #print(f"Current learning rate: {current_lr:.6f}")
         results['learning_rates'].append(current_lr)
 
         # Store the time taken for this epoch
@@ -433,8 +425,6 @@ def experiment(cfg, train_loader, test_loader, print_every_batch=100):
         else:
             prod_rho = torch.sqrt(model.compute_l2_mul(False, False)).item()  # Only compute if regularization is applied
         results['rho_values'].append(prod_rho)
-        #print(f"rho at epoch {epoch}: {prod_rho}")
-
 
         # Early stopping if 100 epochs are reached without exceeding 60% accuracy
         if epoch == 1000 and test_loss['accuracy'] < 60:

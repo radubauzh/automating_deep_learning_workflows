@@ -7,10 +7,8 @@ import matplotlib.pyplot as plt
 from openai import OpenAI
 import ast 
 
-
 def flatten_list(nested_list):
     return [item for sublist in nested_list for item in sublist]
-
 
 def get_last_n_values(data, n=10):
     """Helper function to get last n values from a list or nested list."""
@@ -99,7 +97,6 @@ def generate_gpt_analysis_report(
 
 
 def analyze_results(pickle_file):
-    # Load the results dictionary
     with open(pickle_file, "rb") as f:
         results = pickle.load(f)
 
@@ -123,7 +120,6 @@ def analyze_results(pickle_file):
         if key in results:
             del results[key]
 
-    # Convert string-represented lists to actual lists
     for key in results:
         if isinstance(results[key], str) and "[" in results[key]:
             results[key] = ast.literal_eval(results[key])
@@ -156,15 +152,9 @@ def analyze_results(pickle_file):
     csv_path = os.path.join(output_dir, "summary.csv")
     df.to_csv(csv_path, index=False)
 
-    ################################################################
-    # Generate plots (Accuracy and Loss) and save them to output_dir
-    ################################################################
-
     # Create a figure for Test Accuracy across experiments
     plt.figure(figsize=(10, 6))
     for i, row in df.iterrows():
-        # Each row is one experiment
-        # Attempt to build a short label from some key hyperparameters
         label_str = (
             f"Exp {i} | lr={row.get('lr','?')} | "
             f"sum={row.get('l2_sum_lambda','?')} | "
@@ -172,7 +162,6 @@ def analyze_results(pickle_file):
             f"wn={row.get('wn','?')}"
         )
 
-        # We assume 'test_accuracies' is a list
         test_acc = row.get("test_accuracies", [])
         if not isinstance(test_acc, list):
             continue
@@ -197,7 +186,6 @@ def analyze_results(pickle_file):
             f"wn={row.get('wn','?')}"
         )
 
-        # We assume 'test_losses' is a list
         test_loss = row.get("test_losses", [])
         if not isinstance(test_loss, list):
             continue
@@ -212,7 +200,7 @@ def analyze_results(pickle_file):
     plt.savefig(loss_plot_path, dpi=150)
     plt.close()
 
-    # Now generate GPT analysis report with references to these plot filenames
+    # Generate GPT analysis report with references to these plot filenames
     plot_filenames = ["accuracy_plot.png", "loss_plot.png"]
     additional_context = (
         "We have also generated the following plots in the same folder: "
@@ -227,7 +215,7 @@ def analyze_results(pickle_file):
     generate_gpt_analysis_report(
         csv_path=csv_path,
         model="gpt-4o-mini",
-        output_folder=output_dir,  # Use the same output directory as the CSV file
+        output_folder=output_dir, 
         additional_context=additional_context
     )
 

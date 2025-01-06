@@ -45,10 +45,8 @@ def parse_args():
             if getattr(args, key, None) is None:
                 setattr(args, key, value)
             else:
-                # If the argument is a list and the command-line argument is None, use the config value
                 if isinstance(value, list) and getattr(args, key) == []:
                     setattr(args, key, value)
-                # If the argument is not set via command-line, use the config value
                 elif getattr(args, key) is None:
                     setattr(args, key, value)
 

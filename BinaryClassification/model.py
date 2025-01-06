@@ -65,47 +65,11 @@ class MyMLP(MLP, RegNet):
     def forward(self, x):
         return super().forward(x.view(x.size(0), -1))
 
-# Define a Convolutional Neural Network (CNN) class
-# class CNN(nn.Module, RegNet):
-#     def __init__(self, in_channels, num_classes=10, act="relu", bias=False):
-#         super().__init__()
-#         # Set activation function
-#         if act == "gelu":
-#             self.act = nn.GELU()
-#         elif act == "relu":
-#             self.act = nn.ReLU()
-#         else:
-#             raise ValueError(f"Unknown activation function: {act}")
-
-#         # Define network layers
-#         self.conv1 = nn.Conv2d(in_channels, 32, kernel_size=3, stride=1, padding=1, bias=bias)
-#         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1, bias=bias)
-#         self.conv3 = nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1, bias=bias)
-#         self.conv4 = nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1, bias=bias)
-#         self.fc1 = nn.Linear(128, 128, bias=bias)
-#         self.fc2 = nn.Linear(128, num_classes, bias=bias)
-
-#     def forward(self, x):
-#         # Define forward pass
-#         x = self.act(self.conv1(x))
-#         x = self.act(self.conv2(x))
-#         x = self.act(self.conv3(x))
-#         x = self.act(self.conv4(x))
-#         x = F.avg_pool2d(x, x.size()[2:])
-#         x = x.squeeze(3).squeeze(2)
-#         x = self.act(self.fc1(x))
-#         x = self.fc2(x)
-#         return x # No need for activation here if using CrossEntropyLoss
-
 class OverparameterizedCNN(nn.Module, RegNet):
     def __init__(self, in_channels=3, num_classes=1, act="relu", bias='True', batch_norm='False'):
         super().__init__()
         self.batch_norm = batch_norm == 'True'
         self.bias = bias == 'True'
-
-        # Debugging prints
-        #print(f"Batch Norm: {self.batch_norm}")
-        #print(f"Bias: {self.bias}")
 
         # Set activation function
         if act == "gelu":
@@ -176,10 +140,6 @@ class UnderparameterizedCNN(nn.Module, RegNet):
         self.batch_norm = batch_norm == 'True'
         self.bias = bias == 'True'
 
-        # Debugging prints
-        # print(f"Batch Norm: {self.batch_norm} underparametrized")
-        # print(f"Bias: {self.bias}")
-
         # Set activation function
         if act == "gelu":
             self.act = nn.GELU()
@@ -189,19 +149,19 @@ class UnderparameterizedCNN(nn.Module, RegNet):
             raise ValueError(f"Unknown activation function: {act}")
 
         # Define network layers with fewer parameters
-        self.conv1 = nn.Conv2d(in_channels, 16, kernel_size=3, stride=1, padding=1, bias=self.bias)  # Reduced from 64 to 16
-        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1, bias=self.bias)  # Reduced from 128 to 32
-        self.conv3 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1, bias=self.bias)  # Reduced from 256 to 64
-        self.conv4 = nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1, bias=self.bias)  # Reduced from 512 to 128
+        self.conv1 = nn.Conv2d(in_channels, 16, kernel_size=3, stride=1, padding=1, bias=self.bias)
+        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1, bias=self.bias)
+        self.conv3 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1, bias=self.bias)
+        self.conv4 = nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1, bias=self.bias)
         
         if self.batch_norm:
             self.bn1 = nn.BatchNorm2d(16)
             self.bn2 = nn.BatchNorm2d(32)
             self.bn3 = nn.BatchNorm2d(64)
             self.bn4 = nn.BatchNorm2d(128)
-            self.bn_fc1 = nn.BatchNorm1d(512)  # Adjusted batch norm for reduced fc1 size
+            self.bn_fc1 = nn.BatchNorm1d(512)
         
-        self.fc1 = nn.Linear(128, 512, bias=self.bias)  # Reduced from 2048 to 512
+        self.fc1 = nn.Linear(128, 512, bias=self.bias)
         self.fc2 = nn.Linear(512, num_classes, bias=self.bias)
 
     def forward(self, x):

@@ -35,11 +35,11 @@ class ConfigGenerator(QWidget):
     def __init__(self):
         super().__init__()
         self.init_ui()
-        self.process = None  # Initialize the process attribute
-        self.total_epochs = 0  # To track the total number of epochs
-        self.current_epoch = 0  # To track the current epoch
-        self.total_experiments = 0  # To track total experiments
-        self.current_experiment = 1  # Start from 1 to avoid division by zero
+        self.process = None  
+        self.total_epochs = 0 
+        self.current_epoch = 0
+        self.total_experiments = 0 
+        self.current_experiment = 1
         self.global_epoch_count = 0
         self._last_experiment = 1
         self._last_epoch_for_experiment = 0
@@ -386,7 +386,7 @@ if __name__ == '__main__':
     window = ConfigGenerator()
 
     test_inputs = {
-        'env_name': 'DL',         # You can change this to your conda env name for testing
+        'env_name': 'DL', 
         'batchsize': 64,
         'lr': '0.01',
         'n_epochs': 10,

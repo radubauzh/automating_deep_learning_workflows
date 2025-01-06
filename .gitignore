@@ -173,7 +173,7 @@ cython_debug/
 
 # Ignore the Data folder
 Data/
-Results/
+#Results/
 
 # PyPI configuration file
 .pypirc
