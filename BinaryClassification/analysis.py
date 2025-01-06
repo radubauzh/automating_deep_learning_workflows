@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from openai import OpenAI
-import ast  # For safe evaluation of string-represented lists
+import ast 
 
 
 def flatten_list(nested_list):
@@ -22,15 +22,20 @@ def get_last_n_values(data, n=10):
         return data.apply(lambda x: x[-n:] if isinstance(x, list) else x)
     return data
 
+
 def generate_gpt_analysis_report(
-    csv_path, model="gpt-4o-mini", output_folder="Results"
+    csv_path, 
+    model="gpt-4o-mini", 
+    output_folder="Results", 
+    additional_context=""
 ):
     """
-    Reads the CSV file, sends it to GPT-4O for analysis, and saves a Markdown report.
+    Reads the CSV file, sends it to GPT for analysis, and saves a Markdown report.
 
     :param csv_path: Path to the CSV file containing experiment results
-    :param model:    GPT-4O model to use for analysis
+    :param model:    GPT model to use for analysis
     :param output_folder: Folder name where the Markdown report will be stored
+    :param additional_context: Extra text to add to the GPT prompt (e.g. info about plot filenames)
     :return: None
     """
     # Read the CSV data
@@ -42,12 +47,21 @@ def generate_gpt_analysis_report(
     You have CSV data from multiple experiments. Please analyze it thoroughly and produce a concise, 
     insightful report covering the following points:
 
-    1. **Overall Performance**: Provide an overview of the performance metrics across all experiments, detect if the Models learned or not and if they overfit or underfit or not.
-    2. **Best Parameters**: Identify which parameters produced the best outcomes overall, especially include l2_sum_lambda (Additive Experiment) and l2_mul_lambda (Multiplicative), if both are 0 it's the no regularization Experiment.
+    1. **Overall Performance**: Provide an overview of the performance metrics across all experiments, detect if the models learned or not and if they overfit or underfit.
+    2. **Best Parameters**: Identify which parameters produced the best outcomes overall, especially include l2_sum_lambda (Additive Experiment) and l2_mul_lambda (Multiplicative). If both are 0, it's the no-regularization experiment.
     3. **Experiment Type Analysis**: Determine which experiment type performed best and provide insights into their relative performance.
     4. **Top Experiments**: List the top 3 experiments overall, and also the best experiment within each experiment type.
     5. **Detailed Insights**: Highlight any notable trends or observations from the data.
     6. **Recommendations**: Based on the analysis, provide recommendations for future experiments.
+
+    **Important Notes on Regularization**:
+    - Valid combinations of `l2_sum_lambda` and `l2_mul_lambda` are:
+    - `l2_sum_lambda > 0`, `l2_mul_lambda = 0` (Additive Experiment)
+    - `l2_sum_lambda = 0`, `l2_mul_lambda > 0` (Multiplicative Experiment)
+    - `l2_sum_lambda = 0`, `l2_mul_lambda = 0` (No Regularization)
+    - The combination `l2_sum_lambda > 0` and `l2_mul_lambda > 0` is not valid.
+
+    {additional_context}
 
     Present the analysis in well-structured Markdown suitable for decision-making.
 
@@ -55,13 +69,14 @@ def generate_gpt_analysis_report(
     {csv_text}
     """.strip()
 
+
     client = OpenAI(
         api_key=os.environ.get(
             "OPENAI_API_KEY"
-        ), # Make sure to set your OpenAI API key as an environment variable
+        ),  # Make sure to set your OpenAI API key as an environment variable
     )
 
-    # Call the GPT-4O API
+    # Call the GPT API
     response = client.chat.completions.create(
         model=model,
         messages=[
@@ -130,12 +145,6 @@ def analyze_results(pickle_file):
     for column in columns_to_truncate:
         if column in results:
             results[column] = get_last_n_values(results[column])
-            # print(column)
-            # print(len(results[column]))
-            # print(type(results[column]))
-            # print(results[column])
-            # print(results[column][0])
-
 
     # Build output folder name
     experiment_name = "Analysis_Result_" + os.path.splitext(os.path.basename(pickle_file))[0]
@@ -147,11 +156,79 @@ def analyze_results(pickle_file):
     csv_path = os.path.join(output_dir, "summary.csv")
     df.to_csv(csv_path, index=False)
 
-    # Generate comprehensive GPT-4O report in Markdown format
+    ################################################################
+    # Generate plots (Accuracy and Loss) and save them to output_dir
+    ################################################################
+
+    # Create a figure for Test Accuracy across experiments
+    plt.figure(figsize=(10, 6))
+    for i, row in df.iterrows():
+        # Each row is one experiment
+        # Attempt to build a short label from some key hyperparameters
+        label_str = (
+            f"Exp {i} | lr={row.get('lr','?')} | "
+            f"sum={row.get('l2_sum_lambda','?')} | "
+            f"mul={row.get('l2_mul_lambda','?')} | "
+            f"wn={row.get('wn','?')}"
+        )
+
+        # We assume 'test_accuracies' is a list
+        test_acc = row.get("test_accuracies", [])
+        if not isinstance(test_acc, list):
+            continue
+        plt.plot(range(len(test_acc)), test_acc, marker='o', label=label_str)
+
+    plt.title("Test Accuracy per Experiment (Last 10 Epochs)")
+    plt.xlabel("Epoch (relative to the last 10)")
+    plt.ylabel("Accuracy (%)")
+    plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=1, fontsize='small')
+    plt.tight_layout()
+    accuracy_plot_path = os.path.join(output_dir, "accuracy_plot.png")
+    plt.savefig(accuracy_plot_path, dpi=150)
+    plt.close()
+
+    # Create a figure for Test Loss across experiments
+    plt.figure(figsize=(10, 6))
+    for i, row in df.iterrows():
+        label_str = (
+            f"Exp {i} | lr={row.get('lr','?')} | "
+            f"sum={row.get('l2_sum_lambda','?')} | "
+            f"mul={row.get('l2_mul_lambda','?')} | "
+            f"wn={row.get('wn','?')}"
+        )
+
+        # We assume 'test_losses' is a list
+        test_loss = row.get("test_losses", [])
+        if not isinstance(test_loss, list):
+            continue
+        plt.plot(range(len(test_loss)), test_loss, marker='o', label=label_str)
+
+    plt.title("Test Loss per Experiment (Last 10 Epochs)")
+    plt.xlabel("Epoch (relative to the last 10)")
+    plt.ylabel("Loss")
+    plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=1, fontsize='small')
+    plt.tight_layout()
+    loss_plot_path = os.path.join(output_dir, "loss_plot.png")
+    plt.savefig(loss_plot_path, dpi=150)
+    plt.close()
+
+    # Now generate GPT analysis report with references to these plot filenames
+    plot_filenames = ["accuracy_plot.png", "loss_plot.png"]
+    additional_context = (
+        "We have also generated the following plots in the same folder: "
+        f"{plot_filenames[0]}, {plot_filenames[1]}. "
+        "Please embed them in your analysis report, for example:\n\n"
+        f"![Accuracy Plot]({plot_filenames[0]})\n"
+        f"![Loss Plot]({plot_filenames[1]})\n\n"
+        "Make sure the legend is readable (it's placed at the bottom)."
+    )
+
+    # Generate comprehensive GPT-based report in Markdown format
     generate_gpt_analysis_report(
         csv_path=csv_path,
         model="gpt-4o-mini",
         output_folder=output_dir,  # Use the same output directory as the CSV file
+        additional_context=additional_context
     )
 
 
