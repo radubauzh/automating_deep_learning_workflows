@@ -53,7 +53,7 @@ python -m pytest --cov=BinaryClassification --cov-report=html
 To view the results in HTML format, navigate to the coverage report directory and open the function_index.html file:
 
 ```
-cd /Users/rafaeldubach/automating_deep_learning_workflows/htmlcov
+cd ../automating_deep_learning_workflows/htmlcov
 open function_index.html
 ```
 
