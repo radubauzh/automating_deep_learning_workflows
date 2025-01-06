@@ -1,6 +1,8 @@
 # Automating Deep Learning Workflows
 Automating Deep Learning Workflows: Parameter Management and LLM-based Result Interpretation
 
+![Coverage](https://img.shields.io/badge/Coverage-82%25-brightgreen)
+
 ## Installation
 
 1. **Clone this repository**:
@@ -41,6 +43,19 @@ Automating Deep Learning Workflows: Parameter Management and LLM-based Result In
 - Other hyperparameters: batch size, learning rates, L2 lambdas, etc.
 4. Click "Generate JSON and Run Script" to generate a config file and run main.py within the specified environment.
 
+## Running Tests
+You can run the tests and generate a coverage report using the following command:
+
+```
+python -m pytest --cov=BinaryClassification --cov-report=html
+```
+
+To view the results in HTML format, navigate to the coverage report directory and open the function_index.html file:
+
+```
+cd /Users/rafaeldubach/automating_deep_learning_workflows/htmlcov
+open function_index.html
+```
 
 ## Additional Notes
 
