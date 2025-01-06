@@ -1,7 +1,3 @@
-# main.py
-#!/usr/bin/env python
-# coding: utf-8
-
 import warnings
 import pickle
 import os

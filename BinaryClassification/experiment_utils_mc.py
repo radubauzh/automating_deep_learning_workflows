@@ -1,4 +1,3 @@
-# Import necessary libraries
 from itertools import product
 import os
 import random
