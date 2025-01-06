@@ -58,13 +58,6 @@ class RegNet:
             return l2_mul, [norm.detach().cpu().numpy() for norm in norms]
         return l2_mul
 
-class MyMLP(MLP, RegNet):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def forward(self, x):
-        return super().forward(x.view(x.size(0), -1))
-
 class OverparameterizedCNN(nn.Module, RegNet):
     def __init__(self, in_channels=3, num_classes=1, act="relu", bias='True', batch_norm='False'):
         super().__init__()

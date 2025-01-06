@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn.functional as F
-from model import RegNet, PaperWNInitModel, PaperWNModel, RhoWNModel, UnderparameterizedCNN, set_model_norm_to_one
+from BinaryClassification.model import RegNet, PaperWNInitModel, PaperWNModel, RhoWNModel, UnderparameterizedCNN, set_model_norm_to_one
 import gc
 import time
 from datetime import datetime
@@ -28,6 +28,11 @@ def extract_best_results(results):
     columns = ["experiment_type", "batchsize", "in_channels", "act_name", "bias", "opt_name", "lr",
                "n_epochs", "l2_sum_lambda", "l2_mul_lambda", "wn", "depth_normalization", 
                "final_test_accuracy"]
+    
+    # Ensure all required columns are present in the DataFrame
+    for col in columns:
+        if col not in best_results.columns:
+            best_results[col] = None
     
     best_results_df = best_results[columns].reset_index(drop=True)
     best_results_df.fillna(value='None', inplace=True)  # Added line to replace None values
@@ -200,7 +205,7 @@ def train_epoch(model, cfg, train_loader, optimizer, print_every_batch=100):
         "confidence_out": mean_epoch_confidence,
     }
 
-def test(model, cfg, loader, loader_name="Test"):
+def evaluate_model(model, cfg, loader, loader_name="Test"):
     model.eval()
     loss = 0
     correct = 0
@@ -287,7 +292,7 @@ def experiment(cfg, train_loader, test_loader, print_every_batch=100):
     set_seed(cfg['seed'])  # Use the seed from cfg
 
     timestamp_str = datetime.now().strftime("%Y%m%d%H%M%S")
-    device = cfg['device']
+    device = torch.device(cfg['device'])  # Ensure device is a torch.device object
 
     # Log device info
     print(f"Running on device: {device}")
@@ -300,10 +305,9 @@ def experiment(cfg, train_loader, test_loader, print_every_batch=100):
     else:
         cfg['batch_norm'] = cfg['batch_norm']  # Use batch_norm as per the configuration
 
-
     model_name = "UnderparameterizedCNN" 
     model = UnderparameterizedCNN(
-        in_channels=cfg['in_channels'],
+        in_channels=cfg.get('in_channels', 3),  # Default to 3 if 'in_channels' is not in cfg
         num_classes=1,  # Change from 10 to 1 for binary classification
         act="relu",  # Default activation; change if needed
         bias=cfg['bias'],
@@ -385,8 +389,8 @@ def experiment(cfg, train_loader, test_loader, print_every_batch=100):
             print("Loss is NaN, breaking training...")
             break
 
-        train_loss = test(model, cfg, train_loader, loader_name='Train')
-        test_loss = test(model, cfg, test_loader, loader_name='Test')
+        train_loss = evaluate_model(model, cfg, train_loader, loader_name='Train')
+        test_loss = evaluate_model(model, cfg, test_loader, loader_name='Test')
 
         # Update learning rate using scheduler
         scheduler.step()

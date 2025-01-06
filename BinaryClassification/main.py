@@ -8,8 +8,8 @@ import copy
 import pandas as pd
 import torch
 from torchvision import datasets, transforms
-from experiment_utils_mc import experiment, product_dict, set_seed, mislabel_dataset
-import analysis
+from BinaryClassification.experiment_utils_mc import experiment, product_dict, set_seed, mislabel_dataset
+from BinaryClassification import analysis
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Run CNN experiments with various hyperparameters")
@@ -69,6 +69,11 @@ def parse_args():
         args.mislabel_percentage = 0.0  # Default value if not specified
 
     return args
+
+def strtobool(v):
+    if isinstance(v, bool):
+        return v
+    return v.lower() in ["yes", "true", "t", "1"]
 
 def main():
     args = parse_args()
@@ -149,9 +154,6 @@ def main():
     # Convert lambda values to float to ensure consistency
     l2_sum_lambda = list(map(float, cfg['l2_sum_lambda']))
     l2_mul_lambda = list(map(float, cfg['l2_mul_lambda']))
-    
-    def strtobool(v):
-        return v.lower() in ["yes", "true", "t", "1"]
     
     # Added Batch Normalization
     args.batch_norm = [strtobool(bn) for bn in args.batch_norm]
@@ -253,6 +255,9 @@ def main():
 
     for experiment_type in results['experiment_type'].unique():
         subset = results[results['experiment_type'] == experiment_type]
+
+        # Ensure test_accuracies column contains numeric values
+        subset['test_accuracies'] = subset['test_accuracies'].apply(lambda x: [float(i) for i in x] if isinstance(x, list) else [0])
 
         # Find the row with the best final test accuracy
         best_idx = subset['test_accuracies'].apply(lambda x: max(x) if len(x) > 0 else 0).idxmax()
