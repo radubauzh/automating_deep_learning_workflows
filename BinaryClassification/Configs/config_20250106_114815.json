@@ -1,0 +1,31 @@
+{
+    "batchsize": 64,
+    "lr": [
+        0.01
+    ],
+    "n_epochs": 5,
+    "l2_sum_lambda": [
+        0.01
+    ],
+    "l2_mul_lambda": [],
+    "wn": [
+        0.9
+    ],
+    "seed": [
+        42
+    ],
+    "depth_normalization": [
+        "False"
+    ],
+    "features_normalization": [
+        "f_out"
+    ],
+    "batch_norm": [
+        "False"
+    ],
+    "bias": [
+        "False"
+    ],
+    "device": "auto",
+    "opt_name": "adamw"
+}

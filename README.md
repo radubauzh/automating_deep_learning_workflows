@@ -3,8 +3,12 @@ Automating Deep Learning Workflows: Parameter Management and LLM-based Result In
 
 ## Installation
 
-1. Clone this repository.
-2. (Optional but recommended) Create and activate a virtual environment:
+1. **Clone this repository**:
+   ```bash
+   git clone https://github.com/radubauzh/automating_deep_learning_workflows.git
+   cd ../automating_deep_learning_workflows
+   ```
+2. Create and activate a virtual environment:
    ```
    python -m venv venv
    source venv/bin/activate  # On Windows, use: venv\Scripts\activate
@@ -25,10 +29,19 @@ Automating Deep Learning Workflows: Parameter Management and LLM-based Result In
 
 ## Usage
 
-- To start the GUI, run:>:
+1. Choose a Conda environment name you wish to use (default is DL).
+
+2. Start the GUI, run:
    ```
    python GUI.py
    ```
+
+3. In the GUI, you can specify:
+- Conda environment (default "DL"): Type the name of the environment you want to use.
+- Other hyperparameters: batch size, learning rates, L2 lambdas, etc.
+4. Click "Generate JSON and Run Script" to generate a config file and run main.py within the specified environment.
+
+
 ## Additional Notes
 
 - GPU usage: Ensure you install a PyTorch version compatible with your CUDA setup.

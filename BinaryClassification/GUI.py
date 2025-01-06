@@ -55,6 +55,12 @@ class ConfigGenerator(QWidget):
         # Font style for the labels
         label_font = QFont("Arial", 12, QFont.Bold)
 
+        # Conda Environment
+        env_label = QLabel('Conda Environment Name:')
+        env_label.setFont(label_font)
+        self.env_entry = QLineEdit('DL')  # Default name can be changed by the user
+        self.add_row(layout, env_label, self.env_entry)
+
         # Batch Size
         batch_label = QLabel('Batch Size:')
         batch_label.setFont(label_font)
@@ -155,6 +161,7 @@ class ConfigGenerator(QWidget):
 
     def set_predefined_inputs(self, inputs):
         """ Set predefined inputs for testing purposes """
+        self.env_entry.setText(inputs.get('env_name', 'DL'))
         self.batchsize_entry.setText(str(inputs.get('batchsize', '128')))
         self.lr_entry.setText(inputs.get('lr', '0.01'))
         self.n_epochs_entry.setText(str(inputs.get('n_epochs', '5')))
@@ -258,7 +265,7 @@ class ConfigGenerator(QWidget):
         else:
             seeds_list = []
 
-        # Ensure that the data types match what main.py expects
+        # Collect final configuration
         config = {
             "batchsize": batchsize,
             "lr": lr_list,
@@ -317,13 +324,14 @@ class ConfigGenerator(QWidget):
         self.run_script(config_path)
 
     def run_script(self, config_path):
-        """ Run the commands separately to check if they work """
+        """ Run the commands using the specified conda environment """
         main_dir = os.path.dirname(os.path.abspath(__file__))
+        env_name = self.env_entry.text().strip()  # Get the user-specified environment name
 
         command = f"""
         cd {main_dir} && \
         source ~/miniconda3/etc/profile.d/conda.sh && \
-        conda activate DL && \
+        conda activate {env_name} && \
         python -u main.py --config "{config_path}"
         """
 
@@ -371,12 +379,14 @@ class ConfigGenerator(QWidget):
         QMessageBox.critical(self, 'Process Error', f'Process error occurred: {error_str}', QMessageBox.Ok)
         self.output_text.append(f"Process error occurred: {error_str}")
 
+
 # Run the application
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     window = ConfigGenerator()
 
     test_inputs = {
+        'env_name': 'DL',         # You can change this to your conda env name for testing
         'batchsize': 64,
         'lr': '0.01',
         'n_epochs': 10,
