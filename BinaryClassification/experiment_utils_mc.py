@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn.functional as F
-from BinaryClassification.model import RegNet, PaperWNInitModel, PaperWNModel, RhoWNModel, UnderparameterizedCNN, set_model_norm_to_one
+from model import RegNet, PaperWNInitModel, PaperWNModel, RhoWNModel, UnderparameterizedCNN, set_model_norm_to_one
 import gc
 import time
 from datetime import datetime

@@ -8,8 +8,8 @@ import copy
 import pandas as pd
 import torch
 from torchvision import datasets, transforms
-from BinaryClassification.experiment_utils_mc import experiment, product_dict, set_seed, mislabel_dataset
-from BinaryClassification import analysis
+from experiment_utils_mc import experiment, product_dict, set_seed, mislabel_dataset
+import analysis
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Run CNN experiments with various hyperparameters")
