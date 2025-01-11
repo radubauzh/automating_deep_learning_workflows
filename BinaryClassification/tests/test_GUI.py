@@ -3,9 +3,9 @@ import sys
 import pytest
 import json
 from unittest.mock import patch, MagicMock
-from PyQt5.QtWidgets import QApplication
-from PyQt5.QtTest import QTest
-from PyQt5.QtCore import Qt
+from PySide6.QtWidgets import QApplication
+from PySide6.QtTest import QTest
+from PySide6.QtCore import Qt
 
 # Add the project directory to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))

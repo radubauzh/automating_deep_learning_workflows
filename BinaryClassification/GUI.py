@@ -4,12 +4,12 @@ import json
 import datetime
 import re
 from itertools import product
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QApplication, QWidget, QLabel, QLineEdit, QComboBox, QPushButton,
     QVBoxLayout, QHBoxLayout, QMessageBox, QTextEdit
 )
-from PyQt5.QtGui import QFont
-from PyQt5.QtCore import Qt, QProcess
+from PySide6.QtGui import QFont
+from PySide6.QtCore import Qt, QProcess
 
 # Function to create a product of dictionaries
 def product_dict(**kwargs):
