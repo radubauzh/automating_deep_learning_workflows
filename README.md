@@ -39,7 +39,7 @@ Automating Deep Learning Workflows: Parameter Management and LLM-based Result In
    ```
 
 3. In the GUI, you can specify:
-- Conda environment (default "DL"): Type the name of the environment you want to use.
+- Conda environment (default "dl_workflow_env"): Type the name of the environment you want to use.
 - Other hyperparameters: batch size, learning rates, L2 lambdas, etc.
 4. Click "Generate JSON and Run Script" to generate a config file and run main.py within the specified environment.
 
