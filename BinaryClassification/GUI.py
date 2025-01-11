@@ -477,12 +477,12 @@ class ConfigGenerator(QWidget):
         self.close()
 
     def read_stdout(self):
-        """
-        Called when there is data to read from the QProcess stdout/stderr.
-        We append it to the output text box, and do some custom checks for logging epochs or experiment changes.
-        """
         output = self.process.readAll().data().decode()
         self.output_text.append(output)
+
+        if "ERROR:" in output:
+            error_message = output.split("ERROR:", 1)[1].strip()
+            QMessageBox.critical(self, 'Script Error', f'The script encountered an error:\n{error_message}', QMessageBox.Ok)
 
         # Check if we moved to a new experiment
         experiment_match = re.search(r'Running Experiment (\d+)', output)

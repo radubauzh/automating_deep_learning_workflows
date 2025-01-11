@@ -6,6 +6,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from openai import OpenAI
 import ast 
+import sys
 
 def flatten_list(nested_list):
     return [item for sublist in nested_list for item in sublist]
@@ -78,13 +79,17 @@ def generate_gpt_analysis_report(
     )
 
     # Call the GPT API
-    response = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": "You are an advanced data analyst at MIT."},
-            {"role": "user", "content": prompt},
-        ],
-    )
+    try:
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": "You are an advanced data analyst at MIT."},
+                {"role": "user", "content": prompt},
+            ],
+        )
+    except Exception as e:
+        print("ERROR:", str(e))
+        sys.exit(1)
 
     analysis_report = response.choices[0].message.content
 
