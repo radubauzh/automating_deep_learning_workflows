@@ -516,6 +516,8 @@ class ConfigGenerator(QWidget):
 
         QMessageBox.critical(self, 'Process Error', f'Process error occurred: {error_str}', QMessageBox.Ok)
         self.output_text.append(f"Process error occurred: {error_str}")
+        print(f"GUI process error: {error}")
+
 
 
 # Run the application if this file is executed directly

@@ -10,6 +10,7 @@ import torch
 from torchvision import datasets, transforms
 from experiment_utils_mc import experiment, product_dict, set_seed, mislabel_dataset
 import analysis
+import sys
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Run CNN experiments with various hyperparameters")
@@ -342,4 +343,8 @@ def main():
     analysis.analyze_results(filename)
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        print(f"An error occurred in main.py: {str(e)}")
+        sys.exit(1)

@@ -289,223 +289,227 @@ def set_seed(seed):
 
 # Function to run an experiment with given hyperparameters
 def experiment(cfg, train_loader, test_loader, print_every_batch=100):
-    set_seed(cfg['seed'])  # Use the seed from cfg
-
-    timestamp_str = datetime.now().strftime("%Y%m%d%H%M%S")
-    device = torch.device(cfg['device'])  # Ensure device is a torch.device object
-
-    # Log device info
-    print(f"Running on device: {device}")
-    if device.type == 'cuda':
-        print(f"Available CUDA devices: {torch.cuda.device_count()}")
-
-    # Adjust 'batch_norm' based on 'wn' and the logic
-    if cfg['wn']:
-        cfg['batch_norm'] = False  # Do not use batch_norm if weight normalization is applied
-    else:
-        cfg['batch_norm'] = cfg['batch_norm']  # Use batch_norm as per the configuration
-
-    model_name = "UnderparameterizedCNN" 
-    model = UnderparameterizedCNN(
-        in_channels=cfg.get('in_channels', 3),  # Default to 3 if 'in_channels' is not in cfg
-        num_classes=1,  # Change from 10 to 1 for binary classification
-        act="relu",  # Default activation; change if needed
-        bias=cfg['bias'],
-        batch_norm=cfg['batch_norm'], 
-    ).to(cfg['device'])
-
-    # Apply weight normalization if specified in 'wn'
-    if cfg['wn']:
-        #print("Applying weight normalization...")
-        wn_values = cfg['wn'] if isinstance(cfg['wn'], list) else [cfg['wn']]
-        for wn_value in wn_values:
-            if isinstance(wn_value, float):
-                model = PaperWNInitModel(model, wn_value)
-                model_name = "PaperWNInitModel"
-            elif wn_value == 'default':
-                model = PaperWNModel(model)
-                model_name = "PaperWNModel"
-
-    # Choose optimizer
-    if cfg['opt_name'] == "adam":
-        optimizer = torch.optim.Adam(model.parameters(), lr=cfg['lr'])
-        print("Using Adam optimizer")
-    elif cfg['opt_name'] == "adamw":
-        optimizer = torch.optim.AdamW(model.parameters(), lr=cfg['lr'])
-        print("Using AdamW optimizer")
-    elif cfg['opt_name'] == "sgd":
-        optimizer = torch.optim.SGD(model.parameters(), lr=cfg['lr'], momentum=0.9)
-    else:
-        raise ValueError(f"Unknown optimizer: {cfg['opt_name']}")
-
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=cfg['n_epochs'], eta_min=0.003)
-
-    # Initialize results dictionary
-    results = {
-        "hp": cfg,  # Include hyperparameters in results
-        "train_epoch_losses": [],
-        "train_epoch_l2_sum_losses": [],
-        "train_epoch_l2_mul_losses": [],
-        "train_batch_losses": [],
-        "train_batch_l2_sum_losses": [],
-        "train_batch_l2_mul_losses": [],
-        "train_losses": [],
-        "train_accuracies": [],
-        "train_f1_scores": [], 
-        "train_confusion_matrices": [], 
-        "test_losses": [],
-        "test_accuracies": [],
-        "test_f1_scores": [], 
-        "test_confusion_matrices": [], 
-        "norms": [],
-        "epoch_times": [],  
-        "mean_margin": None,
-        "margins_per_sample": None, 
-        "misclassified_indices": [],
-        "weight_ranks": None,
-        "rho_values": [],
-        "learning_rates": [],
-        "model_state_name": None,
-
-    }
-
-    print("Parameters:", cfg)
-
-    # --- Start the training loop ---
-    for epoch in range(1, cfg['n_epochs'] + 1):
-        cfg['epoch'] = epoch
-
-        start_time = time.time()
-
-        train_results = train_epoch(
-            model=model,
-            cfg=cfg,
-            train_loader=train_loader,
-            optimizer=optimizer,
-            print_every_batch=print_every_batch
-        )
-
-        if np.isnan(train_results['loss_out']):
-            print("Loss is NaN, breaking training...")
-            break
-
-        train_loss = evaluate_model(model, cfg, train_loader, loader_name='Train')
-        test_loss = evaluate_model(model, cfg, test_loader, loader_name='Test')
-
-        # Update learning rate using scheduler
-        scheduler.step()
-
-        end_time = time.time()  # End timing the epoch
-        epoch_time = end_time - start_time
-        print(f"Epoch {epoch} completed in {epoch_time:.2f} seconds")
-
-        current_lr = scheduler.get_last_lr()[0]
-        results['learning_rates'].append(current_lr)
-
-        # Store the time taken for this epoch
-        results['epoch_times'].append(epoch_time)
-
-        # Store results
-        results['train_epoch_losses'].append(train_results['loss_out'])
-        results['train_epoch_l2_sum_losses'].append(train_results['l2_sum_loss_out'])
-        results['train_epoch_l2_mul_losses'].append(train_results['l2_mul_loss_out'])
-        results['train_batch_losses'] += train_results['loss_vec']
-        results['train_batch_l2_sum_losses'] += train_results['l2_sum_loss_vec']
-        results['train_batch_l2_mul_losses'] += train_results['l2_mul_loss_vec']
-        results['train_losses'].append(train_loss['loss'])
-        results['train_accuracies'].append(train_loss['accuracy'])
-        results['train_f1_scores'].append(train_loss['f1_score'])
-        results['train_confusion_matrices'].append(train_loss['confusion_matrix'])
-        results['test_losses'].append(test_loss['loss'])
-        results['test_accuracies'].append(test_loss['accuracy'])
-        results['test_f1_scores'].append(test_loss['f1_score'])
-        results['test_confusion_matrices'].append(test_loss['confusion_matrix'])
-        results['norms'] += train_results['norms_vec']
-
-        # --- Compute and store rho ---
-        if cfg['l2_sum_lambda'] == 0 and cfg['l2_mul_lambda'] == 0:
-            prod_rho = 0  # No regularization
-        else:
-            prod_rho = torch.sqrt(model.compute_l2_mul(False, False)).item()  # Only compute if regularization is applied
-        results['rho_values'].append(prod_rho)
-
-        # Early stopping if 100 epochs are reached without exceeding 60% accuracy
-        if epoch == 1000 and test_loss['accuracy'] < 60:
-            print(f"Model did not exceed 60% accuracy after 100 epochs, stopping training.")
-            break
-
-        # Free up GPU memory after 30 epochs
-        if epoch % 30 == 0:
-            torch.cuda.empty_cache()
-            gc.collect()
-
-    print()
-    # Handle norms based on whether batch normalization was used
-    if not cfg['batch_norm']:
-        results['norms'] = np.array(results['norms']).transpose()
-        print(f"Norms shape: {results['norms'].shape}")
-        #print(f"Norms mean: {np.mean(results['norms'], axis=1)}")
-    else:
-        print("Batch normalization was used, norms are not computed.")
-        results['norms'] = []  # Norms are not computed when batch_norm is True
-
-    # --- Compute weight ranks at convergence ---
-    # This computes the ranks after the training loop has completed, i.e., at convergence
-    weight_ranks = compute_weight_ranks(model)
-    results['weight_ranks'] = weight_ranks  # Store the ranks in the results dictionary
-
-    # After train compute margins on training data
-    margin_model = copy.deepcopy(model)
-    set_model_norm_to_one(margin_model)
-
-    margins_per_sample = compute_margins(margin_model, cfg, train_loader)
-    mean_margin = np.mean(margins_per_sample)
-    print(f"Mean Margin at Convergence: {mean_margin:.6f}")
-
-    results['mean_margin'] = mean_margin
-    results['margins_per_sample'] = margins_per_sample
-
-    if cfg['epoch'] == cfg['n_epochs']:
-        results['misclassified_indices'] = test_loss['misclassified_indices']
-
-
-    # Save the model state
-    date_str = datetime.now().strftime("%Y%m%d%H%M%S")
-
-    # Parameters to include in the filename
-    params_to_include = [
-        'batchsize',  # Added line to include batchsize in the filename
-        'lr', 'n_epochs', 'l2_sum_lambda', 'l2_mul_lambda', 
-        'wn', 'depth_normalization', 'features_normalization',
-        'batch_norm', 'seed'  # Include seed in filename
-    ]
-
-    # Build the parameter string for the filename
-    param_strs = [f"{param}[{str(cfg[param]).replace('/', '-').replace(' ', '_')}]" for param in params_to_include]
-
-    # Build the model save path and determine regularization folder
-    model_state_name = date_str + '-' + '-'.join(param_strs) + '.pt'
-
-    if cfg['l2_sum_lambda'] != 0 and cfg['l2_mul_lambda'] == 0:
-        regularization_folder = 'Summation'
-    elif cfg['l2_sum_lambda'] == 0 and cfg['l2_mul_lambda'] != 0:
-        regularization_folder = 'Multiplication'
-    elif cfg['l2_sum_lambda'] == 0 and cfg['l2_mul_lambda'] == 0:
-        regularization_folder = 'No_Regularization'
-    else:
-        regularization_folder = 'Both'
-
-    # Create necessary directories early
-    model_dir = os.path.join('Models', regularization_folder)
-    os.makedirs(model_dir, exist_ok=True)
-
-    model_state_path = os.path.join(model_dir, model_state_name)
     try:
-        torch.save(model.state_dict(), model_state_path)
-        print(f"Model state_dict saved to {model_state_path}")
+        set_seed(cfg['seed'])  # Use the seed from cfg
+
+        timestamp_str = datetime.now().strftime("%Y%m%d%H%M%S")
+        device = torch.device(cfg['device'])  # Ensure device is a torch.device object
+
+        # Log device info
+        print(f"Running on device: {device}")
+        if device.type == 'cuda':
+            print(f"Available CUDA devices: {torch.cuda.device_count()}")
+
+        # Adjust 'batch_norm' based on 'wn' and the logic
+        if cfg['wn']:
+            cfg['batch_norm'] = False  # Do not use batch_norm if weight normalization is applied
+        else:
+            cfg['batch_norm'] = cfg['batch_norm']  # Use batch_norm as per the configuration
+
+        model_name = "UnderparameterizedCNN" 
+        model = UnderparameterizedCNN(
+            in_channels=cfg.get('in_channels', 3),  # Default to 3 if 'in_channels' is not in cfg
+            num_classes=1,  # Change from 10 to 1 for binary classification
+            act="relu",  # Default activation; change if needed
+            bias=cfg['bias'],
+            batch_norm=cfg['batch_norm'], 
+        ).to(cfg['device'])
+
+        # Apply weight normalization if specified in 'wn'
+        if cfg['wn']:
+            #print("Applying weight normalization...")
+            wn_values = cfg['wn'] if isinstance(cfg['wn'], list) else [cfg['wn']]
+            for wn_value in wn_values:
+                if isinstance(wn_value, float):
+                    model = PaperWNInitModel(model, wn_value)
+                    model_name = "PaperWNInitModel"
+                elif wn_value == 'default':
+                    model = PaperWNModel(model)
+                    model_name = "PaperWNModel"
+
+        # Choose optimizer
+        if cfg['opt_name'] == "adam":
+            optimizer = torch.optim.Adam(model.parameters(), lr=cfg['lr'])
+            print("Using Adam optimizer")
+        elif cfg['opt_name'] == "adamw":
+            optimizer = torch.optim.AdamW(model.parameters(), lr=cfg['lr'])
+            print("Using AdamW optimizer")
+        elif cfg['opt_name'] == "sgd":
+            optimizer = torch.optim.SGD(model.parameters(), lr=cfg['lr'], momentum=0.9)
+        else:
+            raise ValueError(f"Unknown optimizer: {cfg['opt_name']}")
+
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=cfg['n_epochs'], eta_min=0.003)
+
+        # Initialize results dictionary
+        results = {
+            "hp": cfg,  # Include hyperparameters in results
+            "train_epoch_losses": [],
+            "train_epoch_l2_sum_losses": [],
+            "train_epoch_l2_mul_losses": [],
+            "train_batch_losses": [],
+            "train_batch_l2_sum_losses": [],
+            "train_batch_l2_mul_losses": [],
+            "train_losses": [],
+            "train_accuracies": [],
+            "train_f1_scores": [], 
+            "train_confusion_matrices": [], 
+            "test_losses": [],
+            "test_accuracies": [],
+            "test_f1_scores": [], 
+            "test_confusion_matrices": [], 
+            "norms": [],
+            "epoch_times": [],  
+            "mean_margin": None,
+            "margins_per_sample": None, 
+            "misclassified_indices": [],
+            "weight_ranks": None,
+            "rho_values": [],
+            "learning_rates": [],
+            "model_state_name": None,
+
+        }
+
+        print("Parameters:", cfg)
+
+        # --- Start the training loop ---
+        for epoch in range(1, cfg['n_epochs'] + 1):
+            cfg['epoch'] = epoch
+
+            start_time = time.time()
+
+            train_results = train_epoch(
+                model=model,
+                cfg=cfg,
+                train_loader=train_loader,
+                optimizer=optimizer,
+                print_every_batch=print_every_batch
+            )
+
+            if np.isnan(train_results['loss_out']):
+                print("Loss is NaN, breaking training...")
+                break
+
+            train_loss = evaluate_model(model, cfg, train_loader, loader_name='Train')
+            test_loss = evaluate_model(model, cfg, test_loader, loader_name='Test')
+
+            # Update learning rate using scheduler
+            scheduler.step()
+
+            end_time = time.time()  # End timing the epoch
+            epoch_time = end_time - start_time
+            print(f"Epoch {epoch} completed in {epoch_time:.2f} seconds")
+
+            current_lr = scheduler.get_last_lr()[0]
+            results['learning_rates'].append(current_lr)
+
+            # Store the time taken for this epoch
+            results['epoch_times'].append(epoch_time)
+
+            # Store results
+            results['train_epoch_losses'].append(train_results['loss_out'])
+            results['train_epoch_l2_sum_losses'].append(train_results['l2_sum_loss_out'])
+            results['train_epoch_l2_mul_losses'].append(train_results['l2_mul_loss_out'])
+            results['train_batch_losses'] += train_results['loss_vec']
+            results['train_batch_l2_sum_losses'] += train_results['l2_sum_loss_vec']
+            results['train_batch_l2_mul_losses'] += train_results['l2_mul_loss_vec']
+            results['train_losses'].append(train_loss['loss'])
+            results['train_accuracies'].append(train_loss['accuracy'])
+            results['train_f1_scores'].append(train_loss['f1_score'])
+            results['train_confusion_matrices'].append(train_loss['confusion_matrix'])
+            results['test_losses'].append(test_loss['loss'])
+            results['test_accuracies'].append(test_loss['accuracy'])
+            results['test_f1_scores'].append(test_loss['f1_score'])
+            results['test_confusion_matrices'].append(test_loss['confusion_matrix'])
+            results['norms'] += train_results['norms_vec']
+
+            # --- Compute and store rho ---
+            if cfg['l2_sum_lambda'] == 0 and cfg['l2_mul_lambda'] == 0:
+                prod_rho = 0  # No regularization
+            else:
+                prod_rho = torch.sqrt(model.compute_l2_mul(False, False)).item()  # Only compute if regularization is applied
+            results['rho_values'].append(prod_rho)
+
+            # Early stopping if 100 epochs are reached without exceeding 60% accuracy
+            if epoch == 1000 and test_loss['accuracy'] < 60:
+                print(f"Model did not exceed 60% accuracy after 100 epochs, stopping training.")
+                break
+
+            # Free up GPU memory after 30 epochs
+            if epoch % 30 == 0:
+                torch.cuda.empty_cache()
+                gc.collect()
+
+        print()
+        # Handle norms based on whether batch normalization was used
+        if not cfg['batch_norm']:
+            results['norms'] = np.array(results['norms']).transpose()
+            print(f"Norms shape: {results['norms'].shape}")
+            #print(f"Norms mean: {np.mean(results['norms'], axis=1)}")
+        else:
+            print("Batch normalization was used, norms are not computed.")
+            results['norms'] = []  # Norms are not computed when batch_norm is True
+
+        # --- Compute weight ranks at convergence ---
+        # This computes the ranks after the training loop has completed, i.e., at convergence
+        weight_ranks = compute_weight_ranks(model)
+        results['weight_ranks'] = weight_ranks  # Store the ranks in the results dictionary
+
+        # After train compute margins on training data
+        margin_model = copy.deepcopy(model)
+        set_model_norm_to_one(margin_model)
+
+        margins_per_sample = compute_margins(margin_model, cfg, train_loader)
+        mean_margin = np.mean(margins_per_sample)
+        print(f"Mean Margin at Convergence: {mean_margin:.6f}")
+
+        results['mean_margin'] = mean_margin
+        results['margins_per_sample'] = margins_per_sample
+
+        if cfg['epoch'] == cfg['n_epochs']:
+            results['misclassified_indices'] = test_loss['misclassified_indices']
+
+
+        # Save the model state
+        date_str = datetime.now().strftime("%Y%m%d%H%M%S")
+
+        # Parameters to include in the filename
+        params_to_include = [
+            'batchsize',  # Added line to include batchsize in the filename
+            'lr', 'n_epochs', 'l2_sum_lambda', 'l2_mul_lambda', 
+            'wn', 'depth_normalization', 'features_normalization',
+            'batch_norm', 'seed'  # Include seed in filename
+        ]
+
+        # Build the parameter string for the filename
+        param_strs = [f"{param}[{str(cfg[param]).replace('/', '-').replace(' ', '_')}]" for param in params_to_include]
+
+        # Build the model save path and determine regularization folder
+        model_state_name = date_str + '-' + '-'.join(param_strs) + '.pt'
+
+        if cfg['l2_sum_lambda'] != 0 and cfg['l2_mul_lambda'] == 0:
+            regularization_folder = 'Summation'
+        elif cfg['l2_sum_lambda'] == 0 and cfg['l2_mul_lambda'] != 0:
+            regularization_folder = 'Multiplication'
+        elif cfg['l2_sum_lambda'] == 0 and cfg['l2_mul_lambda'] == 0:
+            regularization_folder = 'No_Regularization'
+        else:
+            regularization_folder = 'Both'
+
+        # Create necessary directories early
+        model_dir = os.path.join('Models', regularization_folder)
+        os.makedirs(model_dir, exist_ok=True)
+
+        model_state_path = os.path.join(model_dir, model_state_name)
+        try:
+            torch.save(model.state_dict(), model_state_path)
+            print(f"Model state_dict saved to {model_state_path}")
+        except Exception as e:
+            print(f"Failed to save model state_dict to {model_state_path}. Error: {e}")
+
+        results['model_state_name'] = model_state_name
+
+        return results
     except Exception as e:
-        print(f"Failed to save model state_dict to {model_state_path}. Error: {e}")
-
-    results['model_state_name'] = model_state_name
-
-    return results
+        print(f"An error occurred during training: {str(e)}")
+        raise
