@@ -162,7 +162,13 @@ def analyze_results(pickle_file):
             f"Exp {i} | lr={row.get('lr','?')} | "
             f"sum={row.get('l2_sum_lambda','?')} | "
             f"mul={row.get('l2_mul_lambda','?')} | "
-            f"wn={row.get('wn','?')}"
+            f"wn={row.get('wn','?')} | "
+            f"seed={row.get('seed','?')} | "
+            f"depth_norm={row.get('depth_normalization','?')} | "
+            f"feat_norm={row.get('features_normalization','?')} | "
+            f"batch_norm={row.get('batch_norm','?')} | "
+            f"bias={row.get('bias','?')} | "
+            f"opt={row.get('opt_name','?')}"
         )
 
         test_acc = row.get("test_accuracies", [])
@@ -186,7 +192,13 @@ def analyze_results(pickle_file):
             f"Exp {i} | lr={row.get('lr','?')} | "
             f"sum={row.get('l2_sum_lambda','?')} | "
             f"mul={row.get('l2_mul_lambda','?')} | "
-            f"wn={row.get('wn','?')}"
+            f"wn={row.get('wn','?')} | "
+            f"seed={row.get('seed','?')} | "
+            f"depth_norm={row.get('depth_normalization','?')} | "
+            f"feat_norm={row.get('features_normalization','?')} | "
+            f"batch_norm={row.get('batch_norm','?')} | "
+            f"bias={row.get('bias','?')} | "
+            f"opt={row.get('opt_name','?')}"
         )
 
         test_loss = row.get("test_losses", [])
