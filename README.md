@@ -8,15 +8,15 @@ Automating Deep Learning Workflows: Parameter Management and LLM-based Result In
 1. **Clone this repository**:
    ```bash
    git clone https://github.com/radubauzh/automating_deep_learning_workflows.git
-   cd ../automating_deep_learning_workflows
+   cd automating_deep_learning_workflows
    ```
-2. Create and activate a virtual environment:
-   ```
-   python -m venv venv
-   source venv/bin/activate  # On Windows, use: venv\Scripts\activate
+2. Create and activate a Conda environment:
+   ```bash
+   conda create --name dl_workflow_env python=3.8 -y
+   conda activate dl_workflow_env
    ```
 3. Install all required Python packages:
-   ```
+   ```bash
    pip install -r requirements.txt
    ```
 
@@ -35,7 +35,7 @@ Automating Deep Learning Workflows: Parameter Management and LLM-based Result In
 
 2. Start the GUI, run:
    ```
-   python GUI.py
+   python BinaryClassification/GUI.py
    ```
 
 3. In the GUI, you can specify:

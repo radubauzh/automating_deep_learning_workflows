@@ -13,20 +13,28 @@ from PyQt5.QtCore import Qt, QProcess
 
 # Function to create a product of dictionaries
 def product_dict(**kwargs):
+    """
+    Creates cartesian products for the given keyword arguments. 
+    Special handling for 'l2_sum_lambda' and 'l2_mul_lambda' so 
+    that they don't both get set in the same dictionary (they're treated as mutually exclusive).
+    """
     keys = kwargs.keys()
     if 'l2_sum_lambda' in keys and 'l2_mul_lambda' in keys:
         l2_sum_lambda_values = kwargs['l2_sum_lambda']
         l2_mul_lambda_values = kwargs['l2_mul_lambda']
         other_kwargs = {k: v for k, v in kwargs.items() if k not in ['l2_sum_lambda', 'l2_mul_lambda']}
         
+        # Yield dicts where l2_sum_lambda is set, l2_mul_lambda is empty
         for l2_sum_lambda in l2_sum_lambda_values:
             for instance in product(*other_kwargs.values()):
                 yield dict(zip(other_kwargs.keys(), instance), l2_sum_lambda=l2_sum_lambda, l2_mul_lambda=[])
         
+        # Yield dicts where l2_mul_lambda is set, l2_sum_lambda is empty
         for l2_mul_lambda in l2_mul_lambda_values:
             for instance in product(*other_kwargs.values()):
                 yield dict(zip(other_kwargs.keys(), instance), l2_sum_lambda=[], l2_mul_lambda=l2_mul_lambda)
     else:
+        # Standard cartesian product for all other keyword arguments
         for instance in product(*kwargs.values()):
             yield dict(zip(keys, instance))
 
@@ -177,6 +185,10 @@ class ConfigGenerator(QWidget):
 
     # Validation Functions as Instance Methods
     def validate_positive_int(self, value):
+        """
+        Validate that value is a positive integer. 
+        Return the integer if valid, else None.
+        """
         try:
             int_value = int(value)
             if int_value > 0:
@@ -187,6 +199,10 @@ class ConfigGenerator(QWidget):
             return None
 
     def validate_non_negative_float(self, value):
+        """
+        Validate that value is a non-negative float (>= 0). 
+        Return the float if valid, else None.
+        """
         try:
             float_value = float(value)
             if float_value >= 0:
@@ -197,6 +213,11 @@ class ConfigGenerator(QWidget):
             return None
 
     def validate_comma_separated_list(self, value, validation_function):
+        """
+        Takes a string of comma-separated values, 
+        uses the specified validation_function on each item, 
+        returns a list of validated items or None if any invalid is found.
+        """
         if not value.strip():
             return []  # Return empty list if input is empty
         items = [x.strip() for x in value.split(',') if x.strip()]
@@ -209,7 +230,10 @@ class ConfigGenerator(QWidget):
         return validated_items
 
     def create_json(self):
-        """ Generate the JSON configuration from the input values and run the script """
+        """
+        Generate the JSON configuration from the input values, 
+        validate them, save them to a file, and then run the script.
+        """
         # Validate Batch Size
         batchsize_str = self.batchsize_entry.text()
         batchsize = self.validate_positive_int(batchsize_str)
@@ -289,6 +313,7 @@ class ConfigGenerator(QWidget):
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"config_{timestamp}.json"
 
+        # Create a 'Configs' folder next to this file and save the config there
         config_dir = os.path.join(os.path.dirname(__file__), 'Configs')
         os.makedirs(config_dir, exist_ok=True)
         config_path = os.path.join(config_dir, filename)
@@ -323,30 +348,139 @@ class ConfigGenerator(QWidget):
         # Run the main.py script with the generated configuration file
         self.run_script(config_path)
 
+    # def run_script(self, config_path):
+    #     """Run the commands using the specified conda environment."""
+    #     main_dir = os.path.dirname(os.path.abspath(__file__))
+    #     env_name = self.env_entry.text().strip()  # Get the user-specified environment name
+
+    #     # Check if the conda.sh file exists
+    #     conda_path = os.path.expanduser("~/miniconda3/etc/profile.d/conda.sh")
+    #     if not os.path.exists(conda_path):
+    #         QMessageBox.critical(self, 'Missing File', f'conda.sh file not found at: {conda_path}', QMessageBox.Ok)
+    #         return
+
+    #     # Check if the Conda environment exists
+    #     check_env_command = f"source {conda_path} && conda env list"
+    #     process = QProcess(self)
+    #     process.start('/bin/bash', ['-c', check_env_command])
+    #     process.waitForFinished()
+
+    #     output = process.readAll().data().decode()
+    #     if env_name not in output:
+    #         QMessageBox.critical(
+    #             self,
+    #             'Environment Not Found',
+    #             f'The Conda environment "{env_name}" does not exist.\n'
+    #             'Please create it using "conda create -n <env_name> python=3.x" and try again.',
+    #             QMessageBox.Ok,
+    #         )
+    #         return
+
+    #     # Prepare the bash command
+    #     command = f"""
+    #     cd {main_dir} && \
+    #     source {conda_path} && \
+    #     conda activate {env_name} && \
+    #     python -u main.py --config "{config_path}"
+    #     """
+
+    #     self.process = QProcess(self)
+    #     self.process.setProcessChannelMode(QProcess.MergedChannels)  # Combine stdout and stderr
+
+    #     # Connect signals for process events
+    #     self.process.finished.connect(self.on_process_finished)
+    #     self.process.readyRead.connect(self.read_stdout)
+    #     self.process.errorOccurred.connect(self.process_error)
+
+    #     # Start the process
+    #     self.process.start('/bin/bash', ['-c', command])
+
+
     def run_script(self, config_path):
-        """ Run the commands using the specified conda environment """
+        """Run the commands using the specified conda environment."""
         main_dir = os.path.dirname(os.path.abspath(__file__))
         env_name = self.env_entry.text().strip()  # Get the user-specified environment name
 
+        # Check if the conda.sh file exists
+        conda_path = os.path.expanduser("~/miniconda3/etc/profile.d/conda.sh")
+        if not os.path.exists(conda_path):
+            QMessageBox.critical(self, 'Missing File', f'conda.sh file not found at: {conda_path}', QMessageBox.Ok)
+            return
+
+        # Check if the Conda environment exists
+        check_env_command = f"source {conda_path} && conda env list"
+        process = QProcess(self)
+        process.start('/bin/bash', ['-c', check_env_command])
+        process.waitForFinished()
+
+        output = process.readAll().data().decode()
+        if env_name not in output:
+            QMessageBox.critical(
+                self,
+                'Environment Not Found',
+                f'The Conda environment "{env_name}" does not exist.\n'
+                'Please create it using "conda create -n <env_name> python=3.x" and try again.',
+                QMessageBox.Ok,
+            )
+            return
+
+        # Check if the OpenAI API key is set in the environment
+        if not os.getenv("OPENAI_API_KEY"):
+            QMessageBox.critical(
+                self,
+                'Missing API Key',
+                'The OpenAI API key is missing from the .env file.\n'
+                'Please add "OPENAI_API_KEY=your_openai_api_key_here" to the .env file and try again.',
+                QMessageBox.Ok,
+            )
+            return
+
+        # Prepare the bash command
         command = f"""
         cd {main_dir} && \
-        source ~/miniconda3/etc/profile.d/conda.sh && \
+        source {conda_path} && \
         conda activate {env_name} && \
         python -u main.py --config "{config_path}"
         """
 
         self.process = QProcess(self)
         self.process.setProcessChannelMode(QProcess.MergedChannels)  # Combine stdout and stderr
-        self.process.finished.connect(self.process_finished)
+
+        # Connect signals for process events
+        self.process.finished.connect(self.on_process_finished)
         self.process.readyRead.connect(self.read_stdout)
         self.process.errorOccurred.connect(self.process_error)
+
+        # Start the process
         self.process.start('/bin/bash', ['-c', command])
 
-    def process_finished(self):
-        QMessageBox.information(self, 'Success', 'Script ran successfully!', QMessageBox.Ok)
-        window.close()
+
+
+
+
+    def on_process_finished(self):
+        """
+        Called when the QProcess finishes. We'll check its exit code
+        to decide whether it was truly successful or not.
+        """
+        exit_code = self.process.exitCode()
+        if exit_code == 0:
+            QMessageBox.information(self, 'Success', 'Script ran successfully!', QMessageBox.Ok)
+        else:
+            QMessageBox.critical(
+                self, 
+                'Script Error', 
+                f'Script did not run successfully. Exit code: {exit_code}', 
+                QMessageBox.Ok
+            )
+        # Close the window after finishing
+        self.close()
 
     def read_stdout(self):
+        """
+        Called when there is data to read from the QProcess stdout/stderr.
+        We append it to the output text box, and do some custom checks for logging epochs or experiment changes.
+        """
         output = self.process.readAll().data().decode()
         self.output_text.append(output)
 
@@ -368,6 +502,9 @@ class ConfigGenerator(QWidget):
                 self.global_epoch_count += 1
 
     def process_error(self, error):
+        """
+        If the QProcess fails to start, crashes, or times out, handle it here.
+        """
         error_str = {
             QProcess.FailedToStart: "Failed to start",
             QProcess.Crashed: "Crashed",
@@ -376,17 +513,19 @@ class ConfigGenerator(QWidget):
             QProcess.ReadError: "Read error",
             QProcess.UnknownError: "Unknown error"
         }.get(error, "Unknown error")
+
         QMessageBox.critical(self, 'Process Error', f'Process error occurred: {error_str}', QMessageBox.Ok)
         self.output_text.append(f"Process error occurred: {error_str}")
 
 
-# Run the application
+# Run the application if this file is executed directly
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     window = ConfigGenerator()
 
+    # Example of setting some predefined inputs programmatically
     test_inputs = {
-        'env_name': 'DL', 
+        'env_name': 'dl_workflow_env', 
         'batchsize': 64,
         'lr': '0.01',
         'n_epochs': 10,
