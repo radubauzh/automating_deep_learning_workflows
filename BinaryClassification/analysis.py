@@ -42,6 +42,7 @@ def generate_gpt_analysis_report(
 
     # Construct the prompt
     prompt = f"""
+    You are the best data analyst in the galaxy.
     You have CSV data from multiple experiments. Please analyze it thoroughly and produce a concise, 
     insightful report covering the following points:
 
@@ -51,6 +52,8 @@ def generate_gpt_analysis_report(
     4. **Top Experiments**: List the top 3 experiments overall, and also the best experiment within each experiment type.
     5. **Detailed Insights**: Highlight any notable trends or observations from the data.
     6. **Recommendations**: Based on the analysis, provide recommendations for future experiments.
+
+    Important: For all these points, if you mention an experiment or best parameters, it should always include ALL parameters used in the Experiment like learning rate, l2_sum_lambda, l2_mul_lambda, weight normalization (wn) and any other relevant parameters.
 
     **Important Notes on Regularization**:
     - Valid combinations of `l2_sum_lambda` and `l2_mul_lambda` are:
