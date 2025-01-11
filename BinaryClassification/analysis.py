@@ -55,7 +55,7 @@ def generate_gpt_analysis_report(
     6. **Recommendations**: Based on the analysis, provide recommendations for future experiments.
 
     Important: For all these points, if you mention an experiment or best parameters, it should always include ALL parameters used in the Experiment like learning rate, l2_sum_lambda, l2_mul_lambda, weight normalization (wn) and any other relevant parameters.
-
+    
     **Important Notes on Regularization**:
     - Valid combinations of `l2_sum_lambda` and `l2_mul_lambda` are:
     - `l2_sum_lambda > 0`, `l2_mul_lambda = 0` (Additive Experiment)
@@ -63,6 +63,8 @@ def generate_gpt_analysis_report(
     - `l2_sum_lambda = 0`, `l2_mul_lambda = 0` (No Regularization)
     - The combination `l2_sum_lambda > 0` and `l2_mul_lambda > 0` is not valid.
 
+    Often there are NO experiments ran for no Regularization, so check that you don't mention it in the analysis if it's not present.
+    
     {additional_context}
 
     Present the analysis in well-structured Markdown suitable for decision-making.
@@ -234,7 +236,7 @@ def analyze_results(pickle_file):
     # Generate comprehensive GPT-based report in Markdown format
     generate_gpt_analysis_report(
         csv_path=csv_path,
-        model="gpt-4o-mini",
+        model="chatgpt-4o-latest",
         output_folder=output_dir, 
         additional_context=additional_context
     )
