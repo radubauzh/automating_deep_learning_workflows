@@ -1,20 +1,17 @@
 {
-    "batchsize": 64,
+    "batchsize": 128,
     "lr": [
         0.01
     ],
-    "n_epochs": 25,
+    "n_epochs": 10,
     "l2_sum_lambda": [
-        0.01,
-        0.001
+        0.01
     ],
     "l2_mul_lambda": [
-        0.01,
-        0.001
+        0.01
     ],
     "wn": [
-        0.9,
-        1.2
+        0.9
     ],
     "seed": [
         42

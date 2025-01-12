@@ -1,13 +1,17 @@
 {
     "batchsize": 64,
     "lr": [
-        0.01
+        0.02
     ],
-    "n_epochs": 2,
-    "l2_sum_lambda": [],
-    "l2_mul_lambda": [],
+    "n_epochs": 10,
+    "l2_sum_lambda": [
+        0.001
+    ],
+    "l2_mul_lambda": [
+        0.001
+    ],
     "wn": [
-        0.8
+        0.9
     ],
     "seed": [
         42
@@ -22,8 +26,8 @@
         "False"
     ],
     "bias": [
-        "True"
+        "False"
     ],
     "device": "auto",
-    "opt_name": "adam"
+    "opt_name": "adamw"
 }
